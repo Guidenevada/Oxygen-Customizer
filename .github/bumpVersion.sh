@@ -14,8 +14,8 @@ sed -i 's/"apkUrl":.*/"apkUrl": "https:\/\/github.com\/DHD2280\/Oxygen-Customize
 echo "**$NEWVERNAME**  " > newChangeLog.md
 cat .github/workflowsFiles/FutureChanageLog.md >> newChangeLog.md
 echo "  " >> newChangeLog.md
-cat StableChangelod.md >> newChangeLog.md
-mv  newChangeLog.md StableChangelod.md
+cat StableChangelog.md >> newChangeLog.md
+mv  newChangeLog.md StableChangelog.md
 
 # release notes
 echo "**Changelog:**  " > releaseNotes.md
