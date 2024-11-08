@@ -8,7 +8,7 @@ sed -i 's/versionName =.*/versionName = "'$NEWVERNAME'"/' app/build.gradle.kts
 
 sed -i 's/"version":.*/"version": "'$NEWVERNAME'",/' latestStable.json
 sed -i 's/"versionCode":.*/"versionCode": '$NEWVERCODE',/' latestStable.json
-sed -i 's/"apkUrl":.*/"apkUrl": "https:\/\/github.com\/DHD2280\/Oxygen-Customizer\/releases\/download\/'$GITHUB_REF_NAME'\/OxygenCustomizer.apk",/' latestStable.json
+sed -i 's/"apkUrl":.*/"apkUrl": "https:\/\/github.com\/DHD2280\/Oxygen-Customizer\/releases\/download\/'$GITHUB_REF_NAME'\/OxygenCustomizer.apk"/' latestStable.json
 
 # app changelog
 echo "**$NEWVERNAME**  " > newChangeLog.md
