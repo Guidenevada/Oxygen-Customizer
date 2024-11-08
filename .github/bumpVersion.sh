@@ -12,20 +12,20 @@ sed -i 's/"apkUrl":.*/"apkUrl": "https:\/\/github.com\/DHD2280\/Oxygen-Customize
 
 # app changelog
 echo "**$NEWVERNAME**  " > newChangeLog.md
-cat .github/workflowFiles/FutureChanageLog.md >> newChangeLog.md
+cat .github/workflowsFiles/FutureChanageLog.md >> newChangeLog.md
 echo "  " >> newChangeLog.md
 cat StableChangelod.md >> newChangeLog.md
 mv  newChangeLog.md StableChangelod.md
 
 # release notes
 echo "**Changelog:**  " > releaseNotes.md
-cat .github/workflowFiles/FutureChanageLog.md >> releaseNotes.md
+cat .github/workflowsFiles/FutureChanageLog.md >> releaseNotes.md
 
 # changelog message
 echo "*$NEWVERNAME* released in stable channel  " > telegram.msg
 echo "  " >> telegram.msg
 echo "*Changelog:*  " >> telegram.msg
-cat .github/workflowFiles/FutureChanageLog.md >> telegram.msg
+cat .github/workflowsFiles/FutureChanageLog.md >> telegram.msg
 echo 'TMessage<<EOF' >> $GITHUB_ENV
 cat telegram.msg >> $GITHUB_ENV
 echo >> $GITHUB_ENV

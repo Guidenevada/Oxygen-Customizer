@@ -27,7 +27,7 @@ jobs:
         run: chmod +x .github/*.sh
 
       - name: Version Bump
-        run: .github/bumpVersion.sh ${{ github.run_id }}
+Fix         run: .github/bumpVersion.sh
 
       - name: Gradlew Permissions
         run: chmod +x gradlew
