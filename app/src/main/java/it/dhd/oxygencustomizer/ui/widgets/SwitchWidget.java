@@ -27,6 +27,9 @@ public class SwitchWidget extends RelativeLayout {
     private ImageView iconImageView;
     private MaterialSwitch materialSwitch;
     private BeforeSwitchChangeListener beforeSwitchChangeListener;
+    private int iconWidth, iconHeight;
+    private String mForcePosition = null;
+    private boolean mDrawBackground;
 
     public SwitchWidget(Context context) {
         super(context);
@@ -52,18 +55,27 @@ public class SwitchWidget extends RelativeLayout {
         setTitle(typedArray.getString(R.styleable.SwitchWidget_titleText));
         setSummary(typedArray.getString(R.styleable.SwitchWidget_summaryText));
         setSwitchChecked(typedArray.getBoolean(R.styleable.SwitchWidget_isChecked, false));
+        iconWidth = typedArray.getDimensionPixelSize(R.styleable.SwitchWidget_iconWidth, 20);
+        iconHeight = typedArray.getDimensionPixelSize(R.styleable.SwitchWidget_iconHeight, 20);
+        if (typedArray.hasValue(R.styleable.SwitchWidget_forcePosition)) {
+            mForcePosition = typedArray.getString(R.styleable.SwitchWidget_forcePosition);
+        }
+        mDrawBackground = typedArray.getBoolean(R.styleable.SwitchWidget_drawBackground, true);
         int icon = typedArray.getResourceId(R.styleable.SwitchWidget_icon, 0);
         boolean iconSpaceReserved = typedArray.getBoolean(R.styleable.SwitchWidget_iconSpaceReserved, false);
         typedArray.recycle();
 
         if (icon != 0) {
             iconSpaceReserved = true;
+            setImageDimensions(iconWidth, iconHeight);
             iconImageView.setImageResource(icon);
         }
 
         if (!iconSpaceReserved) {
             iconImageView.setVisibility(GONE);
         }
+
+        setPosition();
 
         container.setOnClickListener(v -> {
             if (materialSwitch.isEnabled()) {
@@ -85,6 +97,7 @@ public class SwitchWidget extends RelativeLayout {
     }
 
     public void setSummary(int summaryResId) {
+        summaryTextView.setVisibility(VISIBLE);
         summaryTextView.setText(summaryResId);
     }
 
@@ -99,12 +112,25 @@ public class SwitchWidget extends RelativeLayout {
 
     public void setIcon(int icon) {
         iconImageView.setImageResource(icon);
+        setImageDimensions(iconWidth, iconHeight);
         iconImageView.setVisibility(VISIBLE);
     }
 
     public void setIcon(Drawable drawable) {
         iconImageView.setImageDrawable(drawable);
+        setImageDimensions(iconWidth, iconHeight);
         iconImageView.setVisibility(VISIBLE);
+    }
+
+    public void setImageDimensions(int width, int height) {
+        iconImageView.getLayoutParams().width = width;
+        iconImageView.getLayoutParams().height = height;
+    }
+
+    public void setImageMargin(int left) {
+        RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) iconImageView.getLayoutParams();
+        layoutParams.setMarginStart(left);
+        iconImageView.setLayoutParams(layoutParams);
     }
 
     public void setIconVisibility(int visibility) {
@@ -125,6 +151,28 @@ public class SwitchWidget extends RelativeLayout {
 
     public void setBeforeSwitchChangeListener(BeforeSwitchChangeListener listener) {
         beforeSwitchChangeListener = listener;
+    }
+
+    private void setPosition() {
+        if (TextUtils.isEmpty(mForcePosition) || container == null) return;
+        if (!mDrawBackground) {
+            container.setBackgroundResource(0);
+            return;
+        }
+
+        int bgRes = switch(mForcePosition) {
+            case "top" -> R.drawable.preference_background_top;
+            case "middle" -> R.drawable.preference_background_middle;
+            case "bottom" -> R.drawable.preference_background_bottom;
+            default -> R.drawable.preference_background_center;
+        };
+
+        container.setBackgroundResource(bgRes);
+    }
+
+    public void forcePosition(String position) {
+        mForcePosition = position;
+        setPosition();
     }
 
     @Override
@@ -174,6 +222,10 @@ public class SwitchWidget extends RelativeLayout {
         layoutParams.addRule(RelativeLayout.START_OF, materialSwitch.getId());
         layoutParams.addRule(RelativeLayout.END_OF, iconImageView.getId());
         findViewById(R.id.text_container).setLayoutParams(layoutParams);
+    }
+
+    public View getTitleView() {
+        return this.titleTextView;
     }
 
     public interface BeforeSwitchChangeListener {

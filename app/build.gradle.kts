@@ -17,9 +17,10 @@ android {
         applicationId = "it.dhd.oxygencustomizer"
         minSdk = 33
         targetSdk = 34
-        versionCode = 4
-        versionName = "1.1.0"
-        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+        versionCode = 11
+        versionName = "beta-11"
+        setProperty("archivesBaseName", "OxygenCustomizer.apk")
+        buildConfigField("int", "MIN_SDK_VERSION", "$minSdk")
     }
 
     val keystorePropertiesFile = rootProject.file("keystore.properties")
@@ -36,13 +37,16 @@ android {
             keyPassword = keystoreProperties.getProperty("keyPassword")
             storeFile = rootProject.file(keystoreProperties.getProperty("storeFile"))
             storePassword = keystoreProperties.getProperty("storePassword")
+            enableV1Signing = true
+            enableV2Signing = true
         }
     } catch (ignored: Exception) {
     }
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            isMinifyEnabled = true
+            isShrinkResources = true
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
@@ -85,58 +89,73 @@ android {
     kotlinOptions {
         jvmTarget = "17"
     }
-        useLibrary ("org.apache.http.legacy")
+    packaging {
+        jniLibs.excludes += setOf(
+            "/META-INF/*",
+            "/META-INF/versions/**",
+            "/org/bouncycastle/**",
+            "/kotlin/**",
+            "/kotlinx/**"
+        )
+
+        resources.excludes += setOf(
+            "/META-INF/*",
+            "/META-INF/versions/**",
+            "/org/bouncycastle/**",
+            "/kotlin/**",
+            "/kotlinx/**",
+            "rebel.xml",
+            "/*.txt",
+            "/*.bin",
+            "/*.json"
+        )
+
+        jniLibs.useLegacyPackaging = true
+    }
 }
 
 dependencies {
 
     // Magisk libsu version
-    val libsuVersion = "5.2.2"
+    val libsuVersion = "6.0.0"
 
     // Xposed
     compileOnly(files("libs/api-82.jar"))
     compileOnly(files("libs/api-82-sources.jar"))
 
     // App Compat
-    implementation("androidx.appcompat:appcompat:1.6.1")
+    implementation("androidx.appcompat:appcompat:1.7.0")
     // Navigation Component
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
-    implementation("androidx.navigation:navigation-fragment-ktx:2.7.7")
-    implementation("androidx.navigation:navigation-ui-ktx:2.7.7")
+    implementation("androidx.navigation:navigation-fragment-ktx:2.8.3")
+    implementation("androidx.navigation:navigation-ui-ktx:2.8.3")
 
     // Recycler View
     implementation("androidx.recyclerview:recyclerview:1.3.2")
 
     // Work
-    implementation("androidx.work:work-runtime:2.9.0")
-    implementation("androidx.concurrent:concurrent-futures:1.1.0")
-
-    // Palette
-    implementation("androidx.palette:palette:1.0.0")
+    implementation("androidx.work:work-runtime:2.9.1")
+    implementation("androidx.concurrent:concurrent-futures:1.2.0")
 
     // Biometric Auth
     implementation("androidx.biometric:biometric:1.1.0")
 
     // Material Design
-    implementation("com.google.android.material:material:1.12.0-beta01")
+    implementation("com.google.android.material:material:1.12.0")
+
+    // Splash Screen
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     // Preference
+    //noinspection KtxExtensionAvailable
     implementation("androidx.preference:preference:1.2.1")
-    implementation("org.apache.commons:commons-text:1.11.0")
+    implementation("org.apache.commons:commons-text:${rootProject.extra["commonsTextVersion"]}")
     // SwipeRefreshLayout
     implementation("androidx.swiperefreshlayout:swiperefreshlayout:1.2.0-alpha01")
     // ColorPicker
     implementation("com.jaredrummler:colorpicker:1.1.0") //Color Picker Component for UI
 
-    // ViewPager2
-    implementation("androidx.viewpager2:viewpager2:1.0.0")
-
-    // Circle Indicator
-    implementation("me.relex:circleindicator:2.1.6")
-
     // Lottie
-    implementation("com.airbnb.android:lottie:6.4.0")
+    implementation("com.airbnb.android:lottie:6.4.1")
 
     // Glide
     implementation("com.github.bumptech.glide:glide:4.16.0")
@@ -153,13 +172,48 @@ dependencies {
     // Optional: Provides remote file system support
     implementation("com.github.topjohnwu.libsu:nio:${libsuVersion}")
 
+    // Constraint
+    implementation("androidx.constraintlayout:constraintlayout:2.2.0")
+
     implementation("org.greenrobot:eventbus:3.3.1")
 
     implementation("com.crossbowffs.remotepreferences:remotepreferences:0.8")
 
     implementation("com.github.tiagohm.MarkdownView:library:0.19.0")
+
+    //Google Subject Segmentation - MLKit
+    implementation("com.google.android.gms:play-services-mlkit-subject-segmentation:16.0.0-beta1")
+    implementation("com.google.android.gms:play-services-base:18.5.0")
+
+    // APK Signer
+    implementation("org.bouncycastle:bcpkix-jdk18on:1.78.1")
+
+    // Zip Util
+    implementation("net.lingala.zip4j:zip4j:2.11.5")
+
+    // Dots Indicator
+    implementation("com.tbuonomo:dotsindicator:5.0")
+
+    // Flexbox
+    implementation("com.google.android.flexbox:flexbox:3.0.0")
+
+    // Palette
+    //noinspection KtxExtensionAvailable
+    implementation("androidx.palette:palette:1.0.0")
+
+    // Persian Date
+    implementation("com.github.mfathi91:persian-date-time:4.2.1")
+
+    // OkHTTP
+    implementation("com.squareup.okhttp3:okhttp:4.12.0")
+
+    // Image Cropper
+    implementation("com.vanniktech:android-image-cropper:4.6.0")
+
+    // Oneplus UI
+    implementation("com.github.DHD2280:Oneplus-UI:1.2.3")
 }
 
 tasks.register("printVersionName") {
-    println(android.defaultConfig.versionName?.replace("-(Stable|Beta)".toRegex(), ""))
+    println(android.defaultConfig.versionName)
 }

@@ -37,13 +37,10 @@
         android:fullBackupContent="@xml/backup_rules"
         android:icon="@mipmap/ic_launcher"
         android:label="@string/app_name"
+        android:localeConfig="@xml/locales_config"
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.OxygenCustomizer" >
-
-        <uses-library
-            android:name="org.apache.http.legacy"
-            android:required="false" />
 
         <meta-data
             android:name="xposedmodule"
@@ -57,14 +54,48 @@
         <meta-data
             android:name="xposedscope"
             android:resource="@array/xposed_scope" />
+        <meta-data
+            android:name="com.google.mlkit.vision.DEPENDENCIES"
+            android:value="subject_segment" /> <!-- ML Kit download -->
+        <activity
+            android:name=".ui.activity.OnboardingActivity"
+            android:exported="false" />
+        <activity
+            android:name=".SplashActivity"
+            android:exported="true"
+            android:enabled="true"
+            android:icon="@mipmap/ic_launcher"
+            android:roundIcon="@mipmap/ic_launcher_round"
+            android:theme="@style/Theme.OxygenCustomizer.SplashScreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- This is the themed icon -->
+        <activity-alias
+            android:name=".SplashActivityThemed"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_themed"
+            android:roundIcon="@mipmap/ic_launcher_round_themed"
+            android:targetActivity=".SplashActivity"
+            android:theme="@style/Theme.OxygenCustomizer.SplashScreen">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <activity
             android:name=".ui.activity.MainActivity"
             android:exported="true"
             android:theme="@style/Theme.OxygenCustomizer">
             <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
                 <action android:name="android.intent.action.RUN" />
-                <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
         </activity>
         <activity
@@ -77,23 +108,41 @@
             android:exported="true"
             android:theme="@style/Theme.OxygenCustomizer"/>
 
+        <activity
+            android:name=".ui.activity.WeatherActivity"
+            android:exported="true"
+            android:excludeFromRecents="true"
+            android:theme="@style/Theme.OxygenCustomizer"/>
+
         <provider
-            android:name=".xposed.utils.RemotePrefProvider"
+            android:name=".provider.RemotePrefProvider"
             android:authorities="it.dhd.oxygencustomizer"
             android:directBootAware="true"
             android:exported="true"
             tools:ignore="ExportedContentProvider" />
 
         <service
-            android:name=".weather.WeatherUpdateService"
+            android:name=".services.RootProviderProxy"
             android:exported="true"
-            android:enabled="true"
-            android:foregroundServiceType="location"
-            android:permission="android.permission.BIND_JOB_SERVICE" />
+            tools:ignore="ExportedService" />
+
+        <service
+            android:name=".services.tiles.CaffeineTileService"
+            android:exported="true"
+            android:icon="@drawable/ic_caffeine"
+            android:label="@string/caffeine"
+            android:permission="android.permission.BIND_QUICK_SETTINGS_TILE">
+            <intent-filter>
+                <action android:name="android.service.quicksettings.action.QS_TILE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.service.quicksettings.TOGGLEABLE_TILE"
+                android:value="true" />
+        </service>
 
         <provider
             android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.provider"
+            android:authorities="${applicationId}.fileprovider"
             android:exported="false"
             android:grantUriPermissions="true">
             <meta-data
@@ -108,7 +157,7 @@
             android:exported="true" />
 
         <receiver
-            android:name=".weather.receivers.SystemReceiver"
+            android:name=".receivers.SystemReceiver"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.BOOT_COMPLETED" />
@@ -121,6 +170,26 @@
             android:name=".google"
             android:exported="false"
             android:label="Google">
+            <intent-filter>
+                <action android:name="org.omnirom.WeatherIconPack" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".google_new_dark"
+            android:exported="false"
+            android:label="Google Material Dark">
+            <intent-filter>
+                <action android:name="org.omnirom.WeatherIconPack" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".google_new_light"
+            android:exported="false"
+            android:label="Google Material Light">
             <intent-filter>
                 <action android:name="org.omnirom.WeatherIconPack" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -217,16 +286,6 @@
         </activity>
 
         <activity
-            android:name=".weather_gnw"
-            android:label="Google Now"
-            android:exported="false">
-            <intent-filter>
-                <action android:name="org.omnirom.WeatherIconPack" />
-                <category android:name="android.intent.category.DEFAULT" />
-            </intent-filter>
-        </activity>
-
-        <activity
             android:name=".weather_miui"
             android:label="MIUI"
             android:exported="false">
@@ -259,6 +318,16 @@
         <activity
             android:name=".weather_magical"
             android:label="Magical"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="org.omnirom.WeatherIconPack" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
+        </activity>
+
+        <activity
+            android:name=".weather_vclouds"
+            android:label="VClouds"
             android:exported="false">
             <intent-filter>
                 <action android:name="org.omnirom.WeatherIconPack" />

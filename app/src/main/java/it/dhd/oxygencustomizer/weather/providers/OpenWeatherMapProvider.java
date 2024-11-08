@@ -16,26 +16,25 @@ package it.dhd.oxygencustomizer.weather.providers;
  * limitations under the License.
  */
 
+import android.content.Context;
+import android.content.res.Resources;
+import android.location.Location;
+import android.text.TextUtils;
+import android.util.Log;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 
-import org.json.JSONArray;
-import org.json.JSONException;
-import org.json.JSONObject;
-
-import android.content.Context;
-import android.content.res.Resources;
-import android.location.Location;
-
-import android.text.TextUtils;
-import android.util.Log;
-
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.weather.AbstractWeatherProvider;
-import it.dhd.oxygencustomizer.weather.Config;
+import it.dhd.oxygencustomizer.weather.WeatherConfig;
 import it.dhd.oxygencustomizer.weather.WeatherInfo;
 import it.dhd.oxygencustomizer.weather.WeatherInfo.DayForecast;
 
@@ -44,7 +43,7 @@ public class OpenWeatherMapProvider extends AbstractWeatherProvider {
 
     private static final int FORECAST_DAYS = 5;
     private static final String URL_WEATHER =
-            "https://api.openweathermap.org/data/2.5/onecall?%s&mode=json&units=%s&lang=%s&cnt=" + FORECAST_DAYS + "&appid=%s";
+            "https://api.openweathermap.org/data/2.5/weather?%s&mode=json&units=%s&lang=%s&cnt=" + FORECAST_DAYS + "&appid=%s";
 
     private List<String> mKeys = new ArrayList<>();
     private boolean mHasAPIKey;
@@ -56,8 +55,9 @@ public class OpenWeatherMapProvider extends AbstractWeatherProvider {
         mHasAPIKey = getAPIKey() != null;
     }
 
-    public WeatherInfo getCustomWeather(String id, boolean metric) {
-        return handleWeatherRequest(id, metric);
+    public WeatherInfo getCustomWeather(String lat, String lon, boolean metric) {
+        String coordinates = String.format(Locale.US, PART_COORDINATES, Float.valueOf(lat), Float.valueOf(lon));
+        return handleWeatherRequest(coordinates, metric);
     }
 
     public WeatherInfo getLocationWeather(Location location, boolean metric) {
@@ -73,7 +73,7 @@ public class OpenWeatherMapProvider extends AbstractWeatherProvider {
         String units = metric ? "metric" : "imperial";
         String locale = getLanguageCode();
         String conditionUrl = String.format(Locale.US, URL_WEATHER, selection, units, locale, getAPIKey());
-        String conditionResponse = retrieve(conditionUrl);
+        String conditionResponse = retrieve(conditionUrl, null);
         if (conditionResponse == null) {
             return null;
         }
@@ -81,11 +81,16 @@ public class OpenWeatherMapProvider extends AbstractWeatherProvider {
 
         try {
             JSONObject conditions = new JSONObject(conditionResponse);
-            JSONObject conditionData = conditions.getJSONObject("current");
-            JSONObject weather = conditionData.getJSONArray("weather").getJSONObject(0);
-            ArrayList<DayForecast> forecasts =
-                    parseForecasts(conditions.getJSONArray("daily"), metric);
-            float windSpeed = (float) conditionData.getDouble("wind_speed");
+            JSONObject conditionData = conditions.getJSONObject("main");
+            JSONObject weather = conditions.getJSONArray("weather").getJSONObject(0);
+            ArrayList<DayForecast> forecasts = new ArrayList<>();
+            ArrayList<WeatherInfo.HourForecast> hourlyForecasts = new ArrayList<>();
+            if (conditions.has("daily")) {
+                forecasts =
+                        parseForecasts(conditions.getJSONArray("daily"), metric);
+            }
+            JSONObject wind = conditions.getJSONObject("wind");
+            float windSpeed = (float) wind.getDouble("speed");
             if (metric) {
                 // speeds are in m/s so convert to our common metric unit km/h
                 windSpeed *= 3.6f;
@@ -100,8 +105,9 @@ public class OpenWeatherMapProvider extends AbstractWeatherProvider {
                     /* temperature */ sanitizeTemperature(conditionData.getDouble("temp"), metric),
                     /* humidity */ (float) conditionData.getDouble("humidity"),
                     /* wind */ windSpeed,
-                    /* windDir */ conditionData.has("wind_deg") ? conditionData.getInt("wind_deg") : 0,
+                    /* windDir */ wind.has("deg") ? wind.getInt("deg") : 0,
                     metric,
+                    hourlyForecasts,
                     forecasts,
                     System.currentTimeMillis());
 
@@ -322,11 +328,18 @@ public class OpenWeatherMapProvider extends AbstractWeatherProvider {
             }
         } catch (Resources.NotFoundException ignored) {
         }
+        try {
+            String key = mContext.getResources().getString(R.string.owm_api_key);
+            if (!TextUtils.isEmpty(key)) {
+                mKeys.add(key);
+            }
+        } catch (Resources.NotFoundException ignored) {
+        }
         log(TAG, "use API keys = " + mKeys);
     }
 
     private String getAPIKey() {
-        String customKey = Config.getOwmKey(mContext);
+        String customKey = WeatherConfig.getOwmKey(mContext);
         if (!TextUtils.isEmpty(customKey)) {
             return customKey;
         }

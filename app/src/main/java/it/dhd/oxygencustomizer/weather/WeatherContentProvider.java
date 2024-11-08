@@ -27,9 +27,11 @@ import android.util.Log;
 
 import androidx.annotation.NonNull;
 
+import it.dhd.oxygencustomizer.utils.WeatherScheduler;
+
 public class WeatherContentProvider extends ContentProvider {
     private static final String TAG = "WeatherService:WeatherContentProvider";
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
 
     static WeatherInfo sCachedWeatherInfo;
 
@@ -53,6 +55,11 @@ public class WeatherContentProvider extends ContentProvider {
     private static final String COLUMN_FORECAST_CONDITION = "forecast_condition";
     private static final String COLUMN_FORECAST_CONDITION_CODE = "forecast_condition_code";
     private static final String COLUMN_FORECAST_DATE = "forecast_date";
+
+    private static final String COLUMN_FORECAST_HOUR = "forecast_hour";
+    private static final String COLUMN_FORECAST_HOUR_TEMP = "forecast_hour_temp";
+    private static final String COLUMN_FORECAST_HOUR_CONDITION = "forecast_hour_condition";
+    private static final String COLUMN_FORECAST_HOUR_CONDITION_CODE = "forecast_hour_condition_code";
 
     private static final String COLUMN_ENABLED = "enabled";
     private static final String COLUMN_PROVIDER = "provider";
@@ -79,7 +86,11 @@ public class WeatherContentProvider extends ContentProvider {
             COLUMN_FORECAST_HIGH,
             COLUMN_FORECAST_CONDITION,
             COLUMN_FORECAST_CONDITION_CODE,
-            COLUMN_FORECAST_DATE
+            COLUMN_FORECAST_DATE,
+            COLUMN_FORECAST_HOUR,
+            COLUMN_FORECAST_HOUR_TEMP,
+            COLUMN_FORECAST_HOUR_CONDITION,
+            COLUMN_FORECAST_HOUR_CONDITION_CODE
     };
 
     private static final String[] PROJECTION_DEFAULT_SETTINGS = new String[] {
@@ -107,7 +118,7 @@ public class WeatherContentProvider extends ContentProvider {
     @Override
     public boolean onCreate() {
         mContext = getContext();
-        sCachedWeatherInfo = Config.getWeatherData(mContext);
+        sCachedWeatherInfo = WeatherConfig.getWeatherData(mContext);
         return true;
     }
 
@@ -125,13 +136,13 @@ public class WeatherContentProvider extends ContentProvider {
 
         if (projectionType == URI_TYPE_SETTINGS) {
             result.newRow()
-                    .add(COLUMN_ENABLED, Config.isEnabled(mContext) ? 1 : 0)
-                    .add(COLUMN_PROVIDER, Config.getProviderId(mContext))
-                    .add(COLUMN_INTERVAL, Config.getUpdateInterval(mContext))
-                    .add(COLUMN_UNITS, Config.isMetric(mContext) ? 0 : 1)
-                    .add(COLUMN_LOCATION, Config.isCustomLocation(mContext) ? Config.getLocationName(mContext) : "")
-                    .add(COLUMN_SETUP, !Config.isSetupDone(mContext) && sCachedWeatherInfo == null ? 0 : 1)
-                    .add(COLUMN_ICON_PACK, Config.getIconPack(mContext) != null ? Config.getIconPack(mContext) : "");
+                    .add(COLUMN_ENABLED, WeatherConfig.isEnabled(mContext) ? 1 : 0)
+                    .add(COLUMN_PROVIDER, WeatherConfig.getProviderId(mContext))
+                    .add(COLUMN_INTERVAL, WeatherConfig.getUpdateInterval(mContext))
+                    .add(COLUMN_UNITS, WeatherConfig.isMetric(mContext) ? 0 : 1)
+                    .add(COLUMN_LOCATION, WeatherConfig.isCustomLocation(mContext) ? WeatherConfig.getLocationName(mContext) : "")
+                    .add(COLUMN_SETUP, !WeatherConfig.isSetupDone(mContext) && sCachedWeatherInfo == null ? 0 : 1)
+                    .add(COLUMN_ICON_PACK, WeatherConfig.getIconPack(mContext) != null ? WeatherConfig.getIconPack(mContext) : "");
 
 
             return result;
@@ -159,6 +170,14 @@ public class WeatherContentProvider extends ContentProvider {
                             .add(COLUMN_FORECAST_HIGH, day.getHigh())
                             .add(COLUMN_FORECAST_CONDITION_CODE, day.getConditionCode())
                             .add(COLUMN_FORECAST_DATE, day.date);
+                }
+
+                for (WeatherInfo.HourForecast hour : weather.getHourForecasts()) {
+                    result.newRow()
+                            .add(COLUMN_FORECAST_HOUR, hour.date)
+                            .add(COLUMN_FORECAST_HOUR_TEMP, hour.getTemp())
+                            .add(COLUMN_FORECAST_HOUR_CONDITION, hour.getCondition(mContext))
+                            .add(COLUMN_FORECAST_HOUR_CONDITION_CODE, hour.getConditionCode());
                 }
 
 
@@ -198,7 +217,7 @@ public class WeatherContentProvider extends ContentProvider {
         if (projectionType == URI_TYPE_CONTROL) {
             if (values.containsKey(COLUMN_FORCE_REFRESH) && values.getAsBoolean(COLUMN_FORCE_REFRESH)) {
                 if (DEBUG) Log.i(TAG, "update: " + uri.toString() + " " + values);
-                WeatherUpdateService.scheduleUpdateNow(mContext);
+                WeatherScheduler.scheduleUpdateNow(mContext);
             }
         }
         return 0;
@@ -206,7 +225,7 @@ public class WeatherContentProvider extends ContentProvider {
 
     public static void updateCachedWeatherInfo(Context context) {
         if (DEBUG) Log.d(TAG, "updateCachedWeatherInfo()");
-        sCachedWeatherInfo = Config.getWeatherData(context);
+        sCachedWeatherInfo = WeatherConfig.getWeatherData(context);
         context.getContentResolver().notifyChange(
                 Uri.parse("content://" + WeatherContentProvider.AUTHORITY + "/weather"), null);
     }

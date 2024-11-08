@@ -6,6 +6,7 @@ import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Parcel;
 import android.os.Parcelable;
+import android.text.TextUtils;
 import android.util.AttributeSet;
 import android.view.View;
 import android.widget.RelativeLayout;
@@ -35,6 +36,7 @@ public class ColorPickerWidget extends RelativeLayout {
     private BeforeColorPickerListener beforeColorPickerListener;
     private OnColorPickerListener colorPickerListener;
     private AfterColorPickerListener afterColorPickerListener;
+    private String mForcePosition = null;
 
     public ColorPickerWidget(Context context) {
         super(context);
@@ -57,8 +59,16 @@ public class ColorPickerWidget extends RelativeLayout {
         initializeId();
 
         TypedArray typedArray = context.obtainStyledAttributes(attrs, R.styleable.ColorPickerWidget);
+        if (typedArray.hasValue(R.styleable.ColorPickerWidget_forcePosition)) {
+            mForcePosition = typedArray.getString(R.styleable.ColorPickerWidget_forcePosition);
+        }
         setTitle(typedArray.getString(R.styleable.ColorPickerWidget_titleText));
-        setSummary(typedArray.getString(R.styleable.ColorPickerWidget_summaryText));
+        String summary = typedArray.getString(R.styleable.ColorPickerWidget_summaryText);
+        if (!TextUtils.isEmpty(summary)) {
+            setSummary(summary);
+        } else {
+            summaryTextView.setVisibility(GONE);
+        }
         int colorResId = typedArray.getResourceId(R.styleable.ColorPickerWidget_previewColor, -1);
         selectedColor = typedArray.getColor(R.styleable.ColorPickerWidget_previewColor, Color.WHITE);
         typedArray.recycle();
@@ -66,6 +76,7 @@ public class ColorPickerWidget extends RelativeLayout {
         if (colorResId != -1) {
             setPreviewColor(ContextCompat.getColor(getContext(), colorResId));
         }
+        setPosition();
     }
 
     public void setTitle(int titleResId) {
@@ -139,6 +150,24 @@ public class ColorPickerWidget extends RelativeLayout {
     }
 
     private void onSelectedColorChanged(@ColorInt int color) {
+    }
+
+    private void setPosition() {
+        if (TextUtils.isEmpty(mForcePosition) || container == null) return;
+
+        int bgRes = switch(mForcePosition) {
+            case "top" -> R.drawable.preference_background_top;
+            case "middle" -> R.drawable.preference_background_middle;
+            case "bottom" -> R.drawable.preference_background_bottom;
+            default -> R.drawable.preference_background_center;
+        };
+
+        container.setBackgroundResource(bgRes);
+    }
+
+    public void forcePosition(String position) {
+        mForcePosition = position;
+        setPosition();
     }
 
     @Override

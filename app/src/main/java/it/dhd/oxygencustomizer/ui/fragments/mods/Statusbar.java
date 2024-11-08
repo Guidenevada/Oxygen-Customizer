@@ -1,28 +1,29 @@
 package it.dhd.oxygencustomizer.ui.fragments.mods;
 
 import static android.content.Context.BATTERY_SERVICE;
+import static it.dhd.oxygencustomizer.OxygenCustomizer.getAppContext;
 import static it.dhd.oxygencustomizer.utils.Constants.Packages.SYSTEM_UI;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.BatteryPrefs.BATTERY_STYLE_DOTTED_CIRCLE;
 
-import android.content.res.Configuration;
-import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.os.BatteryManager;
 import android.os.Bundle;
 
-import androidx.preference.SwitchPreferenceCompat;
+import androidx.preference.Preference;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import it.dhd.oneplusui.preference.OplusSwitchPreference;
 import it.dhd.oxygencustomizer.R;
-import it.dhd.oxygencustomizer.customprefs.ListWithPopUpPreference;
-import it.dhd.oxygencustomizer.customprefs.dialogadapter.ListPreferenceAdapter;
 import it.dhd.oxygencustomizer.ui.base.ControlledPreferenceFragmentCompat;
+import it.dhd.oxygencustomizer.ui.dialogs.DateFormatDialog;
+import it.dhd.oxygencustomizer.ui.preferences.ListWithPopUpPreference;
+import it.dhd.oxygencustomizer.ui.preferences.dialogadapter.ListPreferenceAdapter;
 import it.dhd.oxygencustomizer.utils.AppUtils;
-import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.xposed.batterystyles.BatteryDrawable;
 import it.dhd.oxygencustomizer.xposed.batterystyles.CircleBattery;
+import it.dhd.oxygencustomizer.xposed.batterystyles.CircleFilledBattery;
 import it.dhd.oxygencustomizer.xposed.batterystyles.LandscapeBattery;
 import it.dhd.oxygencustomizer.xposed.batterystyles.LandscapeBatteryA;
 import it.dhd.oxygencustomizer.xposed.batterystyles.LandscapeBatteryB;
@@ -82,7 +83,6 @@ public class Statusbar extends ControlledPreferenceFragmentCompat {
         return new String[]{SYSTEM_UI};
     }
 
-
     public static class BatteryBar extends ControlledPreferenceFragmentCompat {
         @Override
         public String getTitle() {
@@ -139,6 +139,8 @@ public class Statusbar extends ControlledPreferenceFragmentCompat {
 
     public static class Clock extends ControlledPreferenceFragmentCompat {
 
+        private DateFormatDialog mDateFormatDialog;
+
         @Override
         public String getTitle() {
             return getString(R.string.status_bar_clock_title);
@@ -163,11 +165,53 @@ public class Statusbar extends ControlledPreferenceFragmentCompat {
         public String[] getScopes() {
             return new String[]{SYSTEM_UI};
         }
+
+        @Override
+        public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
+            super.onCreatePreferences(savedInstanceState, rootKey);
+            mDateFormatDialog = new DateFormatDialog(requireContext());
+
+            Preference mCustomFormat, mBeforeClock, mAfterClock;
+
+            mCustomFormat = findPreference("status_bar_java_custom");
+            if (mCustomFormat != null) {
+                mCustomFormat.setOnPreferenceClickListener((preference) -> {
+                    mDateFormatDialog.show(
+                            getString(R.string.status_bar_date_format_custom),
+                            mPreferences.getString("status_bar_custom_clock_format", "$GEEE"),
+                            (text) -> mPreferences.edit().putString("status_bar_custom_clock_format", text.toString()).apply());
+                    return true;
+                });
+            }
+
+            mBeforeClock = findPreference("sbc_before_clock");
+            if (mBeforeClock != null) {
+                mBeforeClock.setOnPreferenceClickListener((preference) -> {
+                    mDateFormatDialog.show(
+                            getString(R.string.status_bar_date_format_custom),
+                            mPreferences.getString("sbc_before_clock_format", ""),
+                            (text) -> mPreferences.edit().putString("sbc_before_clock_format", text.toString()).apply());
+                    return true;
+                });
+            }
+
+            mAfterClock = findPreference("sbc_after_clock");
+            if (mAfterClock != null) {
+                mAfterClock.setOnPreferenceClickListener((preference) -> {
+                    mDateFormatDialog.show(
+                            getString(R.string.status_bar_clock_after_clock),
+                            mPreferences.getString("sbc_after_clock_format", ""),
+                            (text) -> mPreferences.edit().putString("sbc_after_clock_format", text.toString()).apply());
+                    return true;
+                });
+            }
+        }
+
     }
 
     public static class BatteryIcon extends ControlledPreferenceFragmentCompat {
 
-        ListWithPopUpPreference mBatteryStyle, mChargingIconStock, mChargingIcon;
+        ListWithPopUpPreference mBatteryStyle, mChargingIcon;
 
         @Override
         public String getTitle() {
@@ -183,44 +227,43 @@ public class Statusbar extends ControlledPreferenceFragmentCompat {
         public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
             super.onCreatePreferences(savedInstanceState, rootKey);
 
-            boolean nightMode = (requireContext().getResources().getConfiguration().uiMode
-                    & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
-            int batteryColor = nightMode ? Color.WHITE : Color.BLACK;
+            int batteryColor = getAppContext().getColor(R.color.textColorPrimary);
             Drawable[] batteryDrawables = new Drawable[] {
-                    new RLandscapeBattery(requireContext(), batteryColor, false),
-                    new LandscapeBattery(requireContext(), batteryColor, false),
-                    new PortraitBatteryCapsule(requireContext(), batteryColor, false),
-                    new PortraitBatteryLorn(requireContext(), batteryColor, false),
-                    new PortraitBatteryMx(requireContext(), batteryColor, false),
-                    new PortraitBatteryAiroo(requireContext(), batteryColor, false),
-                    new RLandscapeBatteryStyleA(requireContext(), batteryColor, false),
-                    new LandscapeBatteryStyleA(requireContext(), batteryColor, false),
-                    new RLandscapeBatteryStyleB(requireContext(), batteryColor, false),
-                    new LandscapeBatteryStyleB(requireContext(), batteryColor, false),
-                    new LandscapeBatteryiOS15(requireContext(), batteryColor, false),
-                    new LandscapeBatteryiOS16(requireContext(), batteryColor, false),
-                    new PortraitBatteryOrigami(requireContext(), batteryColor, false),
-                    new LandscapeBatterySmiley(requireContext(), batteryColor, false),
-                    new LandscapeBatteryMIUIPill(requireContext(), batteryColor, false),
-                    new LandscapeBatteryColorOS(requireContext(), batteryColor, false),
-                    new RLandscapeBatteryColorOS(requireContext(), batteryColor, false),
-                    new LandscapeBatteryA(requireContext(), batteryColor, false),
-                    new LandscapeBatteryB(requireContext(), batteryColor, false),
-                    new LandscapeBatteryC(requireContext(), batteryColor, false),
-                    new LandscapeBatteryD(requireContext(), batteryColor, false),
-                    new LandscapeBatteryE(requireContext(), batteryColor, false),
-                    new LandscapeBatteryF(requireContext(), batteryColor, false),
-                    new LandscapeBatteryG(requireContext(), batteryColor, false),
-                    new LandscapeBatteryH(requireContext(), batteryColor, false),
-                    new LandscapeBatteryI(requireContext(), batteryColor, false),
-                    new LandscapeBatteryJ(requireContext(), batteryColor, false),
-                    new LandscapeBatteryK(requireContext(), batteryColor, false),
-                    new LandscapeBatteryL(requireContext(), batteryColor, false),
-                    new LandscapeBatteryM(requireContext(), batteryColor, false),
-                    new LandscapeBatteryN(requireContext(), batteryColor, false),
-                    new LandscapeBatteryO(requireContext(), batteryColor, false),
-                    new CircleBattery(requireContext(), batteryColor, false),
-                    new CircleBattery(requireContext(), batteryColor, false)
+                    new RLandscapeBattery(requireContext(), batteryColor),
+                    new LandscapeBattery(requireContext(), batteryColor),
+                    new PortraitBatteryCapsule(requireContext(), batteryColor),
+                    new PortraitBatteryLorn(requireContext(), batteryColor),
+                    new PortraitBatteryMx(requireContext(), batteryColor),
+                    new PortraitBatteryAiroo(requireContext(), batteryColor),
+                    new RLandscapeBatteryStyleA(requireContext(), batteryColor),
+                    new LandscapeBatteryStyleA(requireContext(), batteryColor),
+                    new RLandscapeBatteryStyleB(requireContext(), batteryColor),
+                    new LandscapeBatteryStyleB(requireContext(), batteryColor),
+                    new LandscapeBatteryiOS15(requireContext(), batteryColor),
+                    new LandscapeBatteryiOS16(requireContext(), batteryColor),
+                    new PortraitBatteryOrigami(requireContext(), batteryColor),
+                    new LandscapeBatterySmiley(requireContext(), batteryColor),
+                    new LandscapeBatteryMIUIPill(requireContext(), batteryColor),
+                    new LandscapeBatteryColorOS(requireContext(), batteryColor),
+                    new RLandscapeBatteryColorOS(requireContext(), batteryColor),
+                    new LandscapeBatteryA(requireContext(), batteryColor),
+                    new LandscapeBatteryB(requireContext(), batteryColor),
+                    new LandscapeBatteryC(requireContext(), batteryColor),
+                    new LandscapeBatteryD(requireContext(), batteryColor),
+                    new LandscapeBatteryE(requireContext(), batteryColor),
+                    new LandscapeBatteryF(requireContext(), batteryColor),
+                    new LandscapeBatteryG(requireContext(), batteryColor),
+                    new LandscapeBatteryH(requireContext(), batteryColor),
+                    new LandscapeBatteryI(requireContext(), batteryColor),
+                    new LandscapeBatteryJ(requireContext(), batteryColor),
+                    new LandscapeBatteryK(requireContext(), batteryColor),
+                    new LandscapeBatteryL(requireContext(), batteryColor),
+                    new LandscapeBatteryM(requireContext(), batteryColor),
+                    new LandscapeBatteryN(requireContext(), batteryColor),
+                    new LandscapeBatteryO(requireContext(), batteryColor),
+                    new CircleBattery(requireContext(), batteryColor),
+                    new CircleBattery(requireContext(), batteryColor),
+                    new CircleFilledBattery(requireContext(), batteryColor)
             };
 
 
@@ -253,7 +296,7 @@ public class Statusbar extends ControlledPreferenceFragmentCompat {
 
             for (Drawable batteryIcon : batteryDrawables) {
                 ((BatteryDrawable)batteryIcon).setBatteryLevel(batLevel);
-                if (batteryIcon instanceof CircleBattery && batteryIcon == batteryDrawables[batteryDrawables.length-1]) {
+                if (batteryIcon instanceof CircleBattery && batteryIcon == batteryDrawables[batteryDrawables.length-2]) {
                     ((CircleBattery)batteryIcon).setMeterStyle(BATTERY_STYLE_DOTTED_CIRCLE);
                 }
                 ((BatteryDrawable)batteryIcon).setColors(batteryColor, batteryColor, batteryColor);
@@ -277,7 +320,7 @@ public class Statusbar extends ControlledPreferenceFragmentCompat {
                 mChargingIcon.setAdapterType(ListPreferenceAdapter.TYPE_BATTERY_ICONS);
             }
 
-            SwitchPreferenceCompat mBatteryCustomize = findPreference("battery_icon_customize");
+            OplusSwitchPreference mBatteryCustomize = findPreference("battery_icon_customize");
             if (mBatteryCustomize != null) {
                 mBatteryCustomize.setOnPreferenceChangeListener((preference, newValue) -> {
                     AppUtils.restartAllScope(new String[]{SYSTEM_UI});

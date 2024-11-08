@@ -1,33 +1,24 @@
 package it.dhd.oxygencustomizer.xposed.hooks.launcher;
 
-import static android.content.Context.RECEIVER_EXPORTED;
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookConstructor;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getIntField;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
+import static de.robv.android.xposed.XposedHelpers.setObjectField;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
 
-import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.content.IntentFilter;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.ColorFilter;
-import android.graphics.PorterDuff;
-import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
 import android.net.Uri;
 import android.provider.Settings;
 import android.util.AttributeSet;
 import android.view.MotionEvent;
 import android.view.View;
-
-import androidx.core.graphics.ColorUtils;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.XposedHelpers;
@@ -38,11 +29,10 @@ import it.dhd.oxygencustomizer.xposed.XposedMods;
 public class Launcher extends XposedMods {
 
     private static final String listenPackage = Constants.Packages.LAUNCHER;
-
     private int mFolderRows, mFolderColumns, mDrawerColumns;
-    private boolean mFolderRearrange = false, mFolderPreview = false, mDrawerRearrange = false, mOpenAppDetails;
-    private boolean mRemoveShortcut = false, mRemoveClone = false;
+    private boolean mRearrangeHome = false, mFolderRearrange = false, mFolderPreview = false, mDrawerRearrange = false, mOpenAppDetails;
     private boolean mRemoveFolderPagination = false, mRemoveHomePagination = false;
+    private int mMaxRows = 6, mMaxColumns = 4;
 
     public Launcher(Context context) {
         super(context);
@@ -55,12 +45,13 @@ public class Launcher extends XposedMods {
         mFolderRows = Xprefs.getSliderInt("folder_rows", 3);
         mFolderColumns = Xprefs.getSliderInt("folder_columns", 3);
         mDrawerColumns = Xprefs.getSliderInt("drawer_columns", 4);
+        mMaxRows = Xprefs.getSliderInt("launcher_max_rows", 6);
+        mMaxColumns = Xprefs.getSliderInt("launcher_max_columns", 5);
+        mRearrangeHome = Xprefs.getBoolean("rearrange_home", false);
         mFolderRearrange = Xprefs.getBoolean("rearrange_folder", true);
         mFolderPreview = Xprefs.getBoolean("rearrange_preview", true);
         mDrawerRearrange = Xprefs.getBoolean("rearrange_drawer", true);
         mOpenAppDetails = Xprefs.getBoolean("launcher_open_app_details", false);
-        mRemoveShortcut = Xprefs.getBoolean("remove_shortcut_badge_title", false);
-        mRemoveClone = Xprefs.getBoolean("remove_clone_badge", false);
         mRemoveFolderPagination = Xprefs.getBoolean("remove_folder_pagination", false);
         mRemoveHomePagination = Xprefs.getBoolean("remove_home_pagination", false);
 
@@ -74,13 +65,14 @@ public class Launcher extends XposedMods {
 
             @Override
             protected void afterHookedMethod(XC_MethodHook.MethodHookParam param) throws Throwable {
-                log("InvariantDeviceProfile$GridOption constructor called");
                 if (mFolderRearrange) {
                     XposedHelpers.setIntField(param.thisObject, "numFolderColumns", mFolderColumns);
                     XposedHelpers.setIntField(param.thisObject, "numFolderRows", mFolderRows);
                 }
-                if (mFolderPreview) if (mFolderColumns > 3) XposedHelpers.setIntField(param.thisObject, "numFolderPreview", mFolderColumns);
-                if (mDrawerRearrange) XposedHelpers.setIntField(param.thisObject, "numAllAppsColumns", mDrawerColumns);
+                if (mFolderPreview) if (mFolderColumns > 3)
+                    XposedHelpers.setIntField(param.thisObject, "numFolderPreview", mFolderColumns);
+                if (mDrawerRearrange)
+                    XposedHelpers.setIntField(param.thisObject, "numAllAppsColumns", mDrawerColumns);
             }
         });
 
@@ -150,8 +142,40 @@ public class Launcher extends XposedMods {
                     if (mRemoveHomePagination) param.setResult(false);
                 }
             });
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
+        try {
+            Class<?> UiConfig = findClass("com.android.launcher.UiConfig", lpparam.classLoader);
+            hookAllMethods(UiConfig, "isSupportLayout", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    if (mRearrangeHome) param.setResult(true);
+                }
+            });
+
+            Class<?> ToggleBarLayoutAdapter = findClass("com.android.launcher.togglebar.adapter.ToggleBarLayoutAdapter", lpparam.classLoader);
+            hookAllMethods(ToggleBarLayoutAdapter, "initToggleBarLayoutConfigs", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    if (!mRearrangeHome) return;
+                    int[] mMinMaxRows = (int[]) getObjectField(param.thisObject, "MIN_MAX_ROW");
+                    int[] mMinMaxColumns = (int[]) getObjectField(param.thisObject, "MIN_MAX_COLUMN");
+                    mMinMaxRows[1] = mMaxRows;
+                    mMinMaxColumns[1] = mMaxColumns;
+                    setObjectField(param.thisObject, "MIN_MAX_ROW", mMinMaxRows);
+                    setObjectField(param.thisObject, "MIN_MAX_COLUMN", mMinMaxColumns);
+                }
+            });
+        } catch (Throwable t) {
+            log("Error in Launcher Layout " + t);
+        }
+
+    }
+
+    @Override
+    public boolean listensTo(String packageName) {
+        return listenPackage.equals(packageName);
     }
 
     class ClickListener implements View.OnLongClickListener {
@@ -174,10 +198,5 @@ public class Launcher extends XposedMods {
             mContext.startActivity(appDetails);
             return true;
         }
-    }
-
-    @Override
-    public boolean listensTo(String packageName) {
-        return listenPackage.equals(packageName);
     }
 }

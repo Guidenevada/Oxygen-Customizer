@@ -1,55 +1,156 @@
 <?xml version="1.0" encoding="utf-8"?>
 <PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
-    <it.dhd.oxygencustomizer.customprefs.IllustrationPreference
+
+    <it.dhd.oxygencustomizer.ui.preferences.IllustrationPreference
         android:key="sb_illustration"
         app:lottie_rawRes="@raw/misc_illustration" />
-    <SwitchPreferenceCompat
+
+    <it.dhd.oneplusui.preference.OplusSwitchPreference
         android:defaultValue="false"
         android:key="misc_remove_rotate_floating"
-        android:title="@string/misc_remove_rotate_floating_title"
-        android:summaryOn="@string/general_on"
         android:summaryOff="@string/general_off"
+        android:summaryOn="@string/general_on"
+        android:title="@string/misc_remove_rotate_floating_title"
+        app:forcePosition="top"
         app:iconSpaceReserved="false" />
 
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
-        android:title="@string/misc_power_menu">
+    <it.dhd.oneplusui.preference.OplusSwitchPreference
+        android:defaultValue="false"
+        android:key="remove_usb_dialog"
+        android:summary="@string/remove_usb_dialog_summary"
+        android:title="@string/remove_usb_dialog"
+        app:forcePosition="bottom"
+        app:iconSpaceReserved="false" />
 
-        <SwitchPreferenceCompat
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/misc_power_menu"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:defaultValue="false"
             android:key="power_menu_hide_sos"
-            android:title="@string/misc_power_menu_hide_sos"
-            android:summaryOn="@string/general_on"
             android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/misc_power_menu_hide_sos"
             app:iconSpaceReserved="false" />
-        <SwitchPreferenceCompat
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:defaultValue="false"
             android:key="show_advanced_reboot"
-            android:title="@string/show_advanced_reboot_title"
             android:summary="@string/show_advanced_reboot_summary"
+            android:title="@string/show_advanced_reboot_title"
             app:iconSpaceReserved="false" />
-        <SwitchPreferenceCompat
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:defaultValue="false"
             android:key="advanced_reboot_auth"
-            android:title="@string/use_auth_for_advanced_reboot_title"
             android:summary="@string/use_auth_for_advanced_reboot_summary"
+            android:title="@string/use_auth_for_advanced_reboot_title"
             app:iconSpaceReserved="false" />
 
-    </PreferenceCategory>
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
 
-    <PreferenceCategory
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
         android:title="@string/app_name"
         app:iconSpaceReserved="false">
 
-        <SwitchPreferenceCompat
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:defaultValue="true"
             android:key="show_entry_settings"
-            android:title="@string/show_entry_settings_title"
-            android:summaryOn="@string/general_on"
             android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/show_entry_settings_title"
             app:iconSpaceReserved="false" />
 
-    </PreferenceCategory>
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/dark_mode"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusJumpPreference
+            android:key="dark_mode_prefs"
+            android:title="@string/dark_mode_pref"
+            app:iconSpaceReserved="false" />
+
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:key="lag_fix_cat"
+        android:title="@string/misc_category"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:defaultValue="false"
+            android:key="fix_lag_switch"
+            android:summary="@string/fix_lag_summary"
+            android:title="@string/fix_lag_title"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:defaultValue="false"
+            android:key="fix_lag_force_all_apps"
+            android:summary="@string/fix_lag_force_all_apps_summary"
+            android:title="@string/fix_lag_force_all_apps_title"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oneplusui.preference.OplusJumpPreference
+            android:key="fix_lag_app_chooser"
+            android:summary="@string/fix_lag_apps_summary"
+            android:title="@string/fix_lag_apps_title"
+            app:iconSpaceReserved="false" />
+
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/ota_card_category"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:defaultValue="false"
+            android:key="custom_ota_card"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/ota_card_title"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oneplusui.preference.OplusJumpPreference
+            android:key="ota_card_picker"
+            android:summary="@string/pick_image_summary"
+            android:title="@string/pick_image" />
+
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/memc_page_title"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusJumpPreference
+            android:key="memc_prefs"
+            android:title="@string/memc_page_title"
+            android:fragment="it.dhd.oxygencustomizer.ui.fragments.mods.misc.MemcFragment"
+            app:iconSpaceReserved="false" />
+
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:key="pocket_studio_cat"
+        android:title="@string/pocket_studio"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:defaultValue="false"
+            android:key="enable_pocket_studio"
+            android:summary="@string/pocket_studio_summary"
+            android:title="@string/pocket_studio_title"
+            app:forcePosition="full"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oxygencustomizer.ui.preferences.FooterPreference
+            android:key="pocket_studio_footer"
+            android:selectable="false"
+            android:title="@string/pocket_studio_info" />
+
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
 
 </PreferenceScreen>

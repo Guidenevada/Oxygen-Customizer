@@ -1,75 +1,75 @@
 <?xml version="1.0" encoding="utf-8"?>
-<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<it.dhd.oxygencustomizer.appcompat.cardlist.CardListSelectedItemLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/coui_preference"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_weight="1"
-    android:foreground="?selectableItemBackgroundBorderless"
-    android:paddingTop="@dimen/preference_padding_top"
-    android:paddingBottom="@dimen/preference_padding_bottom">
+    android:layout_marginHorizontal="@dimen/preference_card_margin_horizontal"
+    android:clipChildren="false"
+    android:clipToPadding="false"
+    android:gravity="center_vertical"
+    android:orientation="vertical"
+    android:minHeight="@dimen/preference_min_height"
+    android:paddingStart="@dimen/preference_title_padding_start"
+    android:paddingEnd="@dimen/preference_title_padding_end">
 
     <ImageView
         android:id="@android:id/icon"
         android:layout_width="20dp"
         android:layout_height="20dp"
         android:layout_alignParentStart="true"
-        android:layout_centerVertical="true"
-        android:layout_marginEnd="18dp"
-        android:contentDescription="@android:string/untitled"
+        android:layout_marginStart="24dp"
         android:visibility="gone"
-        app:tint="?attr/colorOnSurface" />
+        android:importantForAccessibility="no"
+        app:tint="?attr/colorPrimary" />
 
-    <RelativeLayout
+    <LinearLayout
+        android:id="@+id/text_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        style="@style/PreferenceContent"
         android:layout_toStartOf="@android:id/widget_frame"
         android:layout_toEndOf="@android:id/icon"
-        android:id="@+id/relative_layout"
-        android:paddingStart="@dimen/preference_padding_start"
-        android:paddingEnd="@dimen/preference_padding_end"
         android:orientation="vertical">
 
-        <com.google.android.material.textview.MaterialTextView
+        <TextView
             android:id="@android:id/title"
-            style="?android:attr/textAppearanceListItem"
-            android:layout_width="wrap_content"
+            style="@style/PreferenceTitleStyle"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:textColor="@color/text_color_primary" />
+            android:textColor="?attr/colorOnSurface" />
 
         <TextView
             android:id="@android:id/summary"
-            style="?android:attr/textAppearanceSmall"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_below="@android:id/title"
-            android:textColor="@color/text_color_secondary" />
+            style="@style/PreferenceSummaryStyle"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content" />
 
         <LinearLayout
             android:id="@android:id/widget_frame"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_below="@android:id/summary"
             android:layout_marginTop="4dp"
-            android:orientation="vertical" />
+            android:orientation="vertical"
+            android:visibility="gone" />
 
-    </RelativeLayout>
+    </LinearLayout>
 
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_below="@+id/relative_layout"
+        android:layout_below="@+id/text_container"
+        android:layout_marginBottom="16dp"
         android:orientation="horizontal">
 
         <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/recycler_view"
+            android:id="@+id/pref_recycler_view"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="16dp"
             android:clipChildren="false"
             android:clipToPadding="false"
             android:nestedScrollingEnabled="false"
             android:paddingHorizontal="16dp" />
 
     </LinearLayout>
-
-</RelativeLayout>
+</it.dhd.oxygencustomizer.appcompat.cardlist.CardListSelectedItemLayout>

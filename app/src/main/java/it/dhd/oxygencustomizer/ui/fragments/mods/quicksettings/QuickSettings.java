@@ -1,5 +1,10 @@
 package it.dhd.oxygencustomizer.ui.fragments.mods.quicksettings;
 
+import static it.dhd.oxygencustomizer.utils.Constants.Packages.SYSTEM_UI;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QuickSettings.BLUR_RADIUS_VALUE;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QuickSettings.QSPANEL_BLUR_SWITCH;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QuickSettings.QS_TRANSPARENCY_SWITCH;
+
 import android.annotation.SuppressLint;
 import android.os.Bundle;
 import android.view.Gravity;
@@ -9,7 +14,7 @@ import android.widget.FrameLayout;
 
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.ui.base.ControlledPreferenceFragmentCompat;
-import it.dhd.oxygencustomizer.utils.Constants;
+import it.dhd.oxygencustomizer.utils.AppUtils;
 import it.dhd.oxygencustomizer.utils.PreferenceHelper;
 
 public class QuickSettings extends ControlledPreferenceFragmentCompat {
@@ -55,6 +60,12 @@ public class QuickSettings extends ControlledPreferenceFragmentCompat {
             lp.gravity = Gravity.TOP | (Integer.parseInt(mPreferences.getString("quick_pulldown_side", "1")) == 1 ? Gravity.RIGHT : Gravity.LEFT);
             pullDownIndicator.setLayoutParams(lp);
         } catch (Exception ignored) {}
+        if (key != null && (key.equals(QS_TRANSPARENCY_SWITCH) ||
+                key.equals(QSPANEL_BLUR_SWITCH) ||
+                key.equals(BLUR_RADIUS_VALUE) ||
+                key.equals("qs_show_my_device"))) {
+            AppUtils.restartAllScope(new String[]{SYSTEM_UI});
+        }
     }
 
     private void createPullDownIndicator() {
@@ -77,7 +88,7 @@ public class QuickSettings extends ControlledPreferenceFragmentCompat {
 
     @Override
     public String[] getScopes() {
-        return new String[]{Constants.Packages.SYSTEM_UI};
+        return new String[]{SYSTEM_UI};
     }
 
 }

@@ -1,8 +1,8 @@
 package it.dhd.oxygencustomizer.xposed.hooks.systemui.statusbar;
 
+import static android.content.Context.RECEIVER_EXPORTED;
 import static de.robv.android.xposed.XposedBridge.hookAllConstructors;
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
@@ -10,26 +10,23 @@ import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.findClassIfExists;
 import static de.robv.android.xposed.XposedHelpers.getIntField;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
-import static de.robv.android.xposed.XposedHelpers.setObjectField;
-import static it.dhd.oxygencustomizer.xposed.ResourceManager.resparams;
+import static it.dhd.oxygencustomizer.utils.Constants.ACTIONS_BOOT_COMPLETED;
+import static it.dhd.oxygencustomizer.utils.Constants.Packages.FRAMEWORK;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
-import static it.dhd.oxygencustomizer.xposed.hooks.systemui.SettingsLibUtilsProvider.convertGammaToLinearFloat;
-import static it.dhd.oxygencustomizer.xposed.hooks.systemui.SettingsLibUtilsProvider.getGammaMax;
 
 import android.annotation.SuppressLint;
+import android.app.ActivityManager;
+import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.Paint;
+import android.content.IntentFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
-import android.graphics.drawable.GradientDrawable;
 import android.hardware.display.DisplayManager;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
 import android.util.DisplayMetrics;
-import android.util.Log;
 import android.util.TypedValue;
 import android.view.GestureDetector;
 import android.view.HapticFeedbackConstants;
@@ -41,45 +38,57 @@ import android.view.WindowManager;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
-import androidx.core.content.res.ResourcesCompat;
 
 import java.util.Arrays;
 import java.util.List;
 
 import de.robv.android.xposed.XC_MethodHook;
-import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.xposed.XposedMods;
 import it.dhd.oxygencustomizer.xposed.utils.SystemUtils;
 
+/**
+ * @noinspection RedundantThrows
+ */
 public class StatusbarMods extends XposedMods {
 
     private static final String listenPackage = Constants.Packages.SYSTEM_UI;
-
-    // general use
-    private Object PSBV;
-    private View mStatusBarContents = null;
     private static final int SHADE = 0; //frameworks/base/packages/SystemUI/src/com/android/systemui/statusbar/StatusBarState.java - screen unlocked - pulsing means screen is locked - shade locked means (Q)QS is open on lockscreen
     private static final float PADDING_DEFAULT = -0.5f;
-    private static float SBPaddingStart = 0, SBPaddingEnd = 0;
-    private boolean statusBarPadding;
-    private Object NotificationPanelViewController;
-    boolean oneFingerPulldownEnabled = false;
-    boolean oneFingerPullupEnabled = false;
-    private int pullDownSide = PULLDOWN_SIDE_RIGHT;
     private static final int PULLDOWN_SIDE_RIGHT = 1;
     @SuppressWarnings("unused")
     private static final int PULLDOWN_SIDE_LEFT = 2;
     private static final int STATUSBAR_MODE_SHADE = 0;
     private static final int STATUSBAR_MODE_KEYGUARD = 1;
-    /**
-     * @noinspection unused
-     */
+    @SuppressWarnings("unused")
     private static final int STATUSBAR_MODE_SHADE_LOCKED = 2;
+    private static final float BRIGHTNESS_CONTROL_PADDING = 0.15f;
+    private static final int BRIGHTNESS_CONTROL_LONG_PRESS_TIMEOUT = 750; // ms
+    private static final int BRIGHTNESS_CONTROL_LINGER_THRESHOLD = 20;
+    private static float SBPaddingStart = 0, SBPaddingEnd = 0;
     private static float statusbarPortion = 0.25f;
-
+    final Handler handler = new Handler(Looper.getMainLooper());
+    boolean oneFingerPulldownEnabled = false;
+    boolean oneFingerPullupEnabled = false;
+    GestureDetector mLockscreenDoubleTapToSleep; //event callback for double tap to sleep detection of statusbar only
+    // general use
+    private Object PSBV;
+    final BroadcastReceiver mReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            if (intent != null && intent.getAction() != null) {
+                if (intent.getAction().equals(ACTIONS_BOOT_COMPLETED)) {
+                    updateStatusbarHeight();
+                }
+            }
+        }
+    };
+    private View mStatusBarContents = null;
+    private boolean statusBarPadding;
+    private Object NotificationPanelViewController;
+    private int pullDownSide = PULLDOWN_SIDE_RIGHT;
     private float mMinimumBacklight;
     private float mMaximumBacklight;
     private int mInitialTouchX;
@@ -89,32 +98,25 @@ public class StatusbarMods extends XposedMods {
     private boolean mBrightnessControl;
     private boolean mJustPeeked;
     private Object OplusBrightnessControllerExt = null;
-    private static final float BRIGHTNESS_CONTROL_PADDING = 0.15f;
-    private static final int BRIGHTNESS_CONTROL_LONG_PRESS_TIMEOUT = 750; // ms
-    private static final int BRIGHTNESS_CONTROL_LINGER_THRESHOLD = 20;
     private DisplayMetrics mDisplayMetrics = null;
     private DisplayManager mDisplayManager = null;
     private Object mCollapsedStatusBarFragment = null;
     private ViewGroup mStatusBar;
+    Runnable mLongPressed = this::onLongPressBrightnessChange;
+    // End Padding Vars
     private boolean doubleTapToSleepStatusbarEnabled;
-    GestureDetector mLockscreenDoubleTapToSleep; //event callback for double tap to sleep detection of statusbar only
-
     // Padding Vars
-    private String mLeftDefaultPad = null, mRightDefaultPad = null;
-    private float mLeftPad;
-    private float mRightPad;
     private float mTopPad;
     private boolean mKeyguardShowing = false;
-    // End Padding Vars
-
     private Object mActivityStarter;
     private Class<?> NotificationIconAreaController;
-    private Class<?> DrawableSize = null;
+    private Class<?> DrawableSize = null, ScalingDrawableWrapper = null;
     private Object mNotificationIconAreaController = null;
     private Object mNotificationIconContainer = null;
     private boolean mNewIconStyle;
-    private boolean mNotificationCount;
     private boolean oos13 = false;
+    private boolean mBroadcastRegistered = false;
+
 
     public StatusbarMods(Context context) {
         super(context);
@@ -137,26 +139,16 @@ public class StatusbarMods extends XposedMods {
         mBrightnessControl = Xprefs.getBoolean("brightness_control", false);
 
         // Padding
-        mLeftPad = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                Xprefs.getSliderFloat("statusbar_left_padding", PADDING_DEFAULT),
-                mContext.getResources().getDisplayMetrics());
         mTopPad = TypedValue.applyDimension(
                 TypedValue.COMPLEX_UNIT_DIP,
                 Xprefs.getSliderFloat("statusbar_top_padding", 0f),
                 mContext.getResources().getDisplayMetrics());
-        mRightPad = TypedValue.applyDimension(
-                TypedValue.COMPLEX_UNIT_DIP,
-                Xprefs.getSliderFloat("statusbar_right_padding", PADDING_DEFAULT),
-                mContext.getResources().getDisplayMetrics());
         statusBarPadding = Xprefs.getBoolean("statusbar_padding_enabled", false);
-
-        List<Float> paddings = Xprefs.getSliderValues("statusbarPaddings", 0);
 
         // Notifications
         mNewIconStyle = Xprefs.getBoolean("statusbar_notification_app_icon", false);
-        mNotificationCount = Xprefs.getBoolean("statusbar_notification_count", false);
 
+        List<Float> paddings = Xprefs.getSliderValues("statusbarPaddings", 0);
         if (paddings.size() > 1) {
             SBPaddingStart = paddings.get(0);
             SBPaddingEnd = 100f - paddings.get(1);
@@ -165,19 +157,25 @@ public class StatusbarMods extends XposedMods {
         if (Key.length > 0) {
             switch (Key[0]) {
                 case "statusbarPaddings",
-                        "statusbar_top_padding" -> updateStatusbarHeight();
+                     "statusbar_top_padding" -> updateStatusbarHeight();
                 case "statusbar_padding_enabled" -> updateResources();
                 case "statusbar_notification_app_icon" -> updateNotificationIcons();
-                case "statusbar_notification_count" -> enableCount();
             }
         }
 
     }
 
-
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         if (!lpparam.packageName.equals(listenPackage)) return;
+
+        if (!mBroadcastRegistered) {
+            mBroadcastRegistered = true;
+
+            IntentFilter intentFilter = new IntentFilter();
+            intentFilter.addAction(ACTIONS_BOOT_COMPLETED);
+            mContext.registerReceiver(mReceiver, intentFilter, RECEIVER_EXPORTED); //for Android 14, receiver flag is mandatory
+        }
 
         mLockscreenDoubleTapToSleep = new GestureDetector(mContext, new GestureDetector.SimpleOnGestureListener() {
             @Override
@@ -206,7 +204,8 @@ public class StatusbarMods extends XposedMods {
             QSSecurityFooterUtilsClass = findClass("com.android.systemui.qs.QSSecurityFooter", lpparam.classLoader);
         }
         Class<?> QuickStatusBarHeaderClass;
-        try { QuickStatusBarHeaderClass = findClass("com.oplus.systemui.qs.OplusQuickStatusBarHeader", lpparam.classLoader);
+        try {
+            QuickStatusBarHeaderClass = findClass("com.oplus.systemui.qs.OplusQuickStatusBarHeader", lpparam.classLoader);
         } catch (Throwable t) {
             oos13 = true;
             QuickStatusBarHeaderClass = findClass("com.android.systemui.qs.QuickStatusBarHeader", lpparam.classLoader);
@@ -357,36 +356,7 @@ public class StatusbarMods extends XposedMods {
             }
         });
 
-        Class<?> QuickSettingsController;
-        try {
-            QuickSettingsController = findClass("com.android.systemui.shade.QuickSettingsController", lpparam.classLoader);
-        } catch (Throwable e) {
-            oos13 = true;
-            QuickSettingsController = findClass("com.android.systemui.statusbar.phone.NotificationPanelViewController", lpparam.classLoader);
-        }
         Class<?> CentralSurfacesImpl = findClass("com.android.systemui.statusbar.phone.CentralSurfacesImpl", lpparam.classLoader);
-
-
-        hookAllMethods(QuickSettingsController, "isOpenQsEvent", new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-
-                if (!oneFingerPulldownEnabled) return;
-
-                MotionEvent motionEvent = (MotionEvent) param.args[0];
-                boolean override = false;
-                if (oneFingerPulldownEnabled) {
-                    //mGestureDetector.onTouchEvent(event);
-                    Rect displayBounds = ((WindowManager) mContext.getSystemService(Context.WINDOW_SERVICE)).getCurrentWindowMetrics().getBounds();
-                    override = isTouchInRegion(motionEvent, displayBounds.width());
-                }
-
-                if (override) {
-                    param.setResult(true);
-                }
-
-            }
-        });
 
         Class<?> OplusBrightnessControllerExImpl;
         try {
@@ -417,7 +387,6 @@ public class StatusbarMods extends XposedMods {
         hookAllConstructors(CentralSurfacesImpl, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                Log.d("StatusbarMods", "afterHookedMethod CentralSurfacesImpl");
                 mDisplayMetrics = (DisplayMetrics) getObjectField(param.thisObject, "mDisplayMetrics");
                 mDisplayManager = (DisplayManager) mContext.getSystemService(Context.DISPLAY_SERVICE);
             }
@@ -439,18 +408,22 @@ public class StatusbarMods extends XposedMods {
             }
         }
 
-
+        final GestureDetector mGestureDetector = new GestureDetector(mContext, getPullDownLPListener(QSExpandMethodName));
 
         hookAllMethods(PhoneStatusBarViewControllerClass, "onTouch", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 
-                if (!mBrightnessControl) return;
-
                 MotionEvent event =
                         param.args[0] instanceof MotionEvent
                                 ? (MotionEvent) param.args[0]
                                 : (MotionEvent) param.args[1];
+
+                if (oneFingerPulldownEnabled) {
+                    mGestureDetector.onTouchEvent(event);
+                }
+
+                if (!mBrightnessControl) return;
 
                 final int action = event.getAction();
                 final int x = (int) event.getRawX();
@@ -513,7 +486,12 @@ public class StatusbarMods extends XposedMods {
         });
         try {
             DrawableSize = findClassIfExists("com.android.systemui.util.drawable.DrawableSize", lpparam.classLoader);
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
+        try {
+            ScalingDrawableWrapper = findClass("com.android.systemui.statusbar.ScalingDrawableWrapper", lpparam.classLoader);
+        } catch (Throwable ignored) {
+        }
         Class<?> StatusBarIconView = findClass("com.android.systemui.statusbar.StatusBarIconView", lpparam.classLoader);
         findAndHookMethod(StatusBarIconView,
                 "getIcon",
@@ -524,133 +502,50 @@ public class StatusbarMods extends XposedMods {
                     @Override
                     protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                         if (!mNewIconStyle) return;
+                        Context sysuiContext = (Context) param.args[0];
+                        Context context = (Context) param.args[1];
                         Drawable icon = null;
                         Object statusBarIcon = param.args[2];
 
                         String pkgName = (String) getObjectField(statusBarIcon, "pkg");
+                        if (pkgName.contains("com.android") || pkgName.contains("systemui")) return;
                         try {
                             if (!pkgName.contains("systemui")) {
-                                icon = mContext.getPackageManager().getApplicationIcon(pkgName);
+                                icon = context.getPackageManager().getApplicationIcon(pkgName);
                             }
                         } catch (Throwable e) {
                             return;
                         }
+                        int dimen = 0;
+                        try {
+                            boolean isLowRam = (boolean) callStaticMethod(ActivityManager.class, "isLowRamDeviceStatic");
+                            dimen = mContext.getResources().getDimensionPixelSize(
+                                    mContext.getResources().getIdentifier(
+                                            isLowRam ?
+                                                    "notification_small_icon_size" :
+                                                    "notification_small_icon_size_low_ram", "dimen", FRAMEWORK));
+                        } catch (Throwable ignored) {
+                        }
+                        TypedValue typedValue = new TypedValue();
+                        sysuiContext.getResources().getValue(
+                                sysuiContext.getResources().getIdentifier("status_bar_icon_scale_factor", "dimen", listenPackage),
+                                typedValue, true);
+                        float scaleFactor = typedValue.getFloat();
 
-                        int dimen;
                         if (icon != null) {
-                            dimen = 48;
-                            float density = mContext.getResources().getDisplayMetrics().density;
-                            int dimensionPixelSize = Math.round(dimen * density);
                             if (DrawableSize != null) {
-                                Drawable icon2 = (Drawable) callStaticMethod(DrawableSize, "downscaleToSize", mContext.getResources(), icon, dimensionPixelSize, dimensionPixelSize);
-                                if (icon2 != null) {
-                                    param.setResult(icon2);
-                                }
-                            } else {
+                                icon = (Drawable) callStaticMethod(DrawableSize, "downscaleToSize", sysuiContext.getResources(), icon, dimen, dimen);
+                            }
+                            if (scaleFactor == 1f) { // No need to scale icon
                                 param.setResult(icon);
+                            } else { // Scale Factor != 1f so return a scaled icon
+                                param.setResult(ScalingDrawableWrapper.getConstructor(Drawable.class, float.class).newInstance(icon, scaleFactor));
                             }
                         }
-
                     }
                 });
 
-        hookAllConstructors(StatusBarIconView, new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                Paint mNumberPain = (Paint) getObjectField(param.thisObject, "mNumberPain");
-                mNumberPain.setColor(Color.RED);
 
-            }
-        });
-
-        hookAllMethods(StatusBarIconView, "set", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                if (!mNotificationCount) return;
-                Object statusBarIcon = param.args[0];
-                Object statusBarIcon3 = getObjectField(param.thisObject, "mIcon");
-                boolean z4 = statusBarIcon3 != null && getIntField(statusBarIcon3, "number") == getIntField(statusBarIcon, "number");
-                Drawable mNumberBackground = (Drawable) getObjectField(param.thisObject, "mNumberBackground");
-                if (!z4) {
-                    if (getIntField(statusBarIcon, "number") > 0) {
-                        if (mNumberBackground == null) {
-                            log("mNumberBackground == null");
-                            GradientDrawable gradient = new GradientDrawable(GradientDrawable.Orientation.BOTTOM_TOP, new int[]{
-                                    Color.BLACK,
-                                    Color.BLACK
-                            });
-                            Drawable d = ResourcesCompat.getDrawable(mContext.getResources(),
-                                    mContext.getResources().getIdentifier("ic_notification_overlay", "drawable", listenPackage),
-                                    mContext.getTheme());
-                            setObjectField(param.thisObject, "mNumberBackground", gradient);
-                        }
-                        /*Paint mNumberPain = (Paint) getObjectField(param.thisObject, "mNumberPain");
-                        mNumberPain.setColor(Color.RED);*/
-                        log("placeNumber");
-                        if (getObjectField(param.thisObject, "mIcon") != null) {
-                            callMethod(param.thisObject, "placeNumber");
-                            log("placeNumber");
-                        }
-
-                        //callMethod(param.thisObject, "placeNumber");
-                    } else {
-                        setObjectField(param.thisObject, "mNumberBackground", (Drawable) null);
-                        setObjectField(param.thisObject, "mNumberText", null);
-                    }
-                    log("invalidate"
-                    );
-                    callMethod(param.thisObject, "invalidate");
-                }
-
-
-            }
-        });
-
-    }
-
-    private void enableCount() {
-        XC_InitPackageResources.InitPackageResourcesParam ourResparam = resparams.get(Constants.Packages.SYSTEM_UI);
-        if (ourResparam == null) return;
-        log("enableCount");
-        ourResparam.res.setReplacement("com.android.systemui", "bool", "config_statusBarShowNumber", mNotificationCount);
-    }
-
-    //region icon tap related
-    class ClickListener implements View.OnClickListener, View.OnLongClickListener {
-        public ClickListener() {
-        }
-
-        @Override
-        public void onClick(View v) {
-            String name = mContext.getResources().getResourceName(v.getId());
-            if (name.endsWith("batteryRemainingIcon")) {
-                showBatteryPage();
-            }
-        }
-
-        @Override
-        public boolean onLongClick(View v) {
-            String name = mContext.getResources().getResourceName(v.getId());
-
-            if (name.endsWith("batteryRemainingIcon")) {
-                showBatteryPage();
-                return true;
-            }
-            return false;
-        }
-    }
-
-    class LongClickListener implements View.OnLongClickListener {
-        @Override
-        public boolean onLongClick(View v) {
-            String name = mContext.getResources().getResourceName(v.getId());
-
-            if (name.endsWith("settings_button")) {
-                openOxygenCustomizer();
-                return true;
-            }
-            return false;
-        }
     }
 
     private void openOxygenCustomizer() {
@@ -685,9 +580,6 @@ public class StatusbarMods extends XposedMods {
 
     }
 
-    final Handler handler = new Handler(Looper.getMainLooper());
-    Runnable mLongPressed = this::onLongPressBrightnessChange;
-
     private void onLongPressBrightnessChange() {
         if (mStatusBar != null)
             mStatusBar.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
@@ -709,9 +601,7 @@ public class StatusbarMods extends XposedMods {
         if (mStatusBar != null)
             mStatusBar.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
 
-        final float val = convertGammaToLinearFloat(
-                Math.round(value * getGammaMax()),
-                mMinimumBacklight, mMaximumBacklight);
+        final float val = mMinimumBacklight + value * (mMaximumBacklight - mMinimumBacklight);
         callMethod(mDisplayManager, "setTemporaryBrightness", 0, val);
         callMethod(mDisplayManager, "setTemporaryAutoBrightnessAdjustment", val);
         callMethod(OplusBrightnessControllerExt, "setBrightness", (int) val);
@@ -810,13 +700,11 @@ public class StatusbarMods extends XposedMods {
     private void updateNotificationIcons() {
         try {
             callMethod(mNotificationIconAreaController, "updateStatusBarIcons");
-        } catch (Throwable e) {
-            e.printStackTrace();
+        } catch (Throwable ignored) {
         }
         try {
             callMethod(mNotificationIconContainer, "updateState");
-        } catch (Throwable e) {
-            e.printStackTrace();
+        } catch (Throwable ignored) {
         }
     }
 
@@ -857,6 +745,44 @@ public class StatusbarMods extends XposedMods {
 
         @Override
         public boolean onFling(@Nullable MotionEvent e1, @NonNull MotionEvent e2, float velocityX, float velocityY) {
+            return false;
+        }
+    }
+
+    //region icon tap related
+    class ClickListener implements View.OnClickListener, View.OnLongClickListener {
+        public ClickListener() {
+        }
+
+        @Override
+        public void onClick(View v) {
+            String name = mContext.getResources().getResourceName(v.getId());
+            if (name.endsWith("batteryRemainingIcon")) {
+                showBatteryPage();
+            }
+        }
+
+        @Override
+        public boolean onLongClick(View v) {
+            String name = mContext.getResources().getResourceName(v.getId());
+
+            if (name.endsWith("batteryRemainingIcon")) {
+                showBatteryPage();
+                return true;
+            }
+            return false;
+        }
+    }
+
+    class LongClickListener implements View.OnLongClickListener {
+        @Override
+        public boolean onLongClick(View v) {
+            String name = mContext.getResources().getResourceName(v.getId());
+
+            if (name.endsWith("settings_button")) {
+                openOxygenCustomizer();
+                return true;
+            }
             return false;
         }
     }

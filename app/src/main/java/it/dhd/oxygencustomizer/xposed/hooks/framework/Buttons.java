@@ -1,9 +1,9 @@
 package it.dhd.oxygencustomizer.xposed.hooks.framework;
 
 import static android.content.Context.RECEIVER_EXPORTED;
+import static de.robv.android.xposed.XposedBridge.hookAllConstructors;
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
 import static de.robv.android.xposed.XposedBridge.hookMethod;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.findMethodExact;
@@ -26,12 +26,14 @@ import android.os.Handler;
 import android.os.SystemClock;
 import android.os.VibrationAttributes;
 import android.os.VibrationEffect;
+import android.text.TextUtils;
 import android.view.KeyEvent;
 import android.view.ViewConfiguration;
 
 import java.lang.reflect.Method;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.xposed.XposedMods;
@@ -39,35 +41,42 @@ import it.dhd.oxygencustomizer.xposed.utils.SystemUtils;
 
 public class Buttons extends XposedMods {
 
-    private final String TAG = "Oxygen Customizer - Buttons ";
-    public static final String listenPackage = Constants.Packages.SYSTEM_UI;
     private static boolean holdVolumeToSkip = false;
     private static boolean holdVolumeToTorch = false;
     private static boolean volumeToTorchHasTimeout = false;
+    private static Object PWMExImpl = null;
+    private static boolean volumeToTorchProximity = false;
+    private static SensorManager sensorManager;
+    private static Sensor proximitySensor;
+    private static SensorEventListener proximitySensorListener;
+    private static boolean shouldTorch = true;
+    private static Object PWM;
+    private final String TAG = "Oxygen Customizer - Buttons ";
+    Handler mHandler;
     private long wakeTime = 0;
     //    private boolean isVolumeLongPress = false;
     private boolean isVolDown = false;
     private boolean disablePowerOnLockscreen = false;
     private boolean broadcastRegistered = false;
-    private static Object PWMExImpl = null;
     private int volumeToTorchTimeout = 5000;
-    private static boolean volumeToTorchProximity = false;
-    private static SensorManager sensorManager;
-    private static Sensor proximitySensor;
-    private static SensorEventListener proximitySensorListener;
-    private static boolean shouldTorch = false;
-    Handler mHandler;
-
+    private boolean settingsUpdated = false;
     final BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
             try {
                 String action = intent.getAction();
-                log("Received broadcast: " + action);
-                if (action.equals(Constants.ACTION_POWER_MENU)) {
-                    showPowerMenu();
+                if (action == null) return;
+                String className = intent.getStringExtra("class");
+                if (action.equals(Constants.ACTION_SETTINGS_CHANGED)) {
+                    if (!TextUtils.isEmpty(className) && className.equals(Buttons.class.getSimpleName())) {
+                        log("Buttons: Intent received - will update preferences");
+                        settingsUpdated = false;
+                        updatePrefs();
+                    }
                 }
-            } catch (Throwable ignored) {}
+            } catch (Throwable t) {
+                log("Oxygen Customizer - Buttons: " + t.getMessage());
+            }
         }
     };
 
@@ -75,8 +84,22 @@ public class Buttons extends XposedMods {
         super(context);
     }
 
+    public static void toggleNotifications() {
+        if (PWM != null) {
+            Object statusBarService = callMethod(PWM, "getStatusBarService");
+            try {
+                if (statusBarService != null)
+                    callMethod(PWM, "statusBarService");
+            } catch (Throwable t) {
+                XposedBridge.log("[ Oxygen Customizer - Buttons ] ERROR: " + t);
+            }
+        }
+    }
+
     @Override
     public void updatePrefs(String... Key) {
+
+        if (settingsUpdated) return;
 
         holdVolumeToSkip = Xprefs.getBoolean(BUTTONS_VOLUME_MUSIC, false);
         disablePowerOnLockscreen = Xprefs.getBoolean(DISABLE_POWER, false);
@@ -84,6 +107,8 @@ public class Buttons extends XposedMods {
         volumeToTorchHasTimeout = Xprefs.getBoolean("volbtn_torch_enable_timeout", false);
         volumeToTorchTimeout = Xprefs.getSliderInt("volbtn_torch_timeout", 5) * 1000;
         volumeToTorchProximity = Xprefs.getBoolean("volbtn_torch_use_proximity", false);
+
+        settingsUpdated = true;
     }
 
     @Override
@@ -93,7 +118,7 @@ public class Buttons extends XposedMods {
             broadcastRegistered = true;
 
             IntentFilter intentFilter = new IntentFilter();
-            intentFilter.addAction(Constants.ACTION_POWER_MENU);
+            intentFilter.addAction(Constants.ACTION_SETTINGS_CHANGED);
             mContext.registerReceiver(broadcastReceiver, intentFilter, RECEIVER_EXPORTED); //for Android 14, receiver flag is mandatory
         }
 
@@ -121,22 +146,23 @@ public class Buttons extends XposedMods {
                     keyIntent.putExtra(Intent.EXTRA_KEY_EVENT, keyEvent);
                     SystemUtils.AudioManager().dispatchMediaKeyEvent(mediaEvent);
 
-                    SystemUtils.vibrate(VibrationEffect.EFFECT_TICK, VibrationAttributes.USAGE_ACCESSIBILITY);
+                    SystemUtils.vibrate(VibrationEffect.EFFECT_TICK, VibrationAttributes.USAGE_COMMUNICATION_REQUEST);
                 } catch (Throwable t) {
-                    log(TAG + " ERROR IN mVolumeLongPress\n" + t);
+                    log(" ERROR IN mVolumeLongPress\n" + t);
                 }
             };
 
 
             Runnable mToggleFlash = () -> {
-                try  {
+                try {
                     if (SystemUtils.isFlashOn()) {
                         SystemUtils.shutdownFlash();
 
                         SystemUtils.vibrate(VibrationEffect.EFFECT_TICK, VibrationAttributes.USAGE_ACCESSIBILITY);
 
                     }
-                } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {
+                }
             };
 
             Runnable mVolumeLongPressTorch = () -> {
@@ -167,6 +193,8 @@ public class Buttons extends XposedMods {
                         if (proximitySensor != null) {
                             sensorManager.unregisterListener(proximitySensorListener);
                         }
+                    } else {
+                        shouldTorch = true;
                     }
                     if (volumeToTorchProximity && !shouldTorch) {
                         return;
@@ -178,9 +206,20 @@ public class Buttons extends XposedMods {
                         mHandler.postDelayed(mToggleFlash, volumeToTorchTimeout);
                     }
                 } catch (Throwable t) {
-                    log(TAG + " ERROR IN mVolumeLongPressTorch\n" + t);
+                    log(" ERROR IN mVolumeLongPressTorch\n" + t);
                 }
             };
+
+            try {
+                hookAllConstructors(PhoneWindowManagerClass, new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        PWM = param.thisObject;
+                    }
+                });
+            } catch (Throwable t) {
+                log(t);
+            }
 
             hookAllMethods(PhoneWindowManagerExtImpl, "overrideInit", new XC_MethodHook() {
                 @Override
@@ -209,24 +248,27 @@ public class Buttons extends XposedMods {
                             case KeyEvent.ACTION_UP -> {
                                 if (mHandler.hasCallbacks(mVolumeLongPress) || mHandler.hasCallbacks(mVolumeLongPressTorch)) {
                                     SystemUtils.AudioManager().adjustStreamVolume(AudioManager.STREAM_MUSIC, Keycode == KeyEvent.KEYCODE_VOLUME_DOWN ? AudioManager.ADJUST_LOWER : AudioManager.ADJUST_RAISE, 0);
-                                    if (mHandler.hasCallbacks(mVolumeLongPress)) mHandler.removeCallbacks(mVolumeLongPress);
-                                    if (mHandler.hasCallbacks(mVolumeLongPressTorch)) mHandler.removeCallbacks(mVolumeLongPressTorch);
-                                    if (mHandler.hasCallbacks(mToggleFlash)) mHandler.removeCallbacks(mToggleFlash);
+                                    if (mHandler.hasCallbacks(mVolumeLongPress))
+                                        mHandler.removeCallbacks(mVolumeLongPress);
+                                    if (mHandler.hasCallbacks(mVolumeLongPressTorch))
+                                        mHandler.removeCallbacks(mVolumeLongPressTorch);
+                                    if (mHandler.hasCallbacks(mToggleFlash))
+                                        mHandler.removeCallbacks(mToggleFlash);
                                 }
                             }
                             case KeyEvent.ACTION_DOWN -> {
                                 if (!SystemUtils.PowerManager().isInteractive() &&
                                         (Keycode == KeyEvent.KEYCODE_VOLUME_DOWN ||
                                                 Keycode == KeyEvent.KEYCODE_VOLUME_UP)) {
-                                    if (SystemUtils.AudioManager().isMusicActive()) {
+                                    if (SystemUtils.AudioManager().isMusicActive() && holdVolumeToSkip) {
                                         isVolDown = (Keycode == KeyEvent.KEYCODE_VOLUME_DOWN);
                                         mHandler.postDelayed(mVolumeLongPress, ViewConfiguration.getLongPressTimeout());
                                         param.setResult(0);
                                     } else {
                                         int audioMode = SystemUtils.AudioManager().getMode();
                                         if (audioMode == AudioManager.MODE_IN_CALL ||
-                                            audioMode == AudioManager.MODE_IN_COMMUNICATION ||
-                                            audioMode == AudioManager.MODE_RINGTONE) return;
+                                                audioMode == AudioManager.MODE_IN_COMMUNICATION ||
+                                                audioMode == AudioManager.MODE_RINGTONE) return;
                                         if (holdVolumeToTorch) {
                                             mHandler.postDelayed(mVolumeLongPressTorch, ViewConfiguration.getLongPressTimeout());
                                             param.setResult(0);
@@ -236,7 +278,7 @@ public class Buttons extends XposedMods {
                             }
                         }
                     } catch (Throwable t) {
-                        log(TAG + " ERROR IN interceptKeyBeforeQueueing\n" + t);
+                        log(" ERROR IN interceptKeyBeforeQueueing\n" + t);
                     }
                 }
             });
@@ -246,7 +288,7 @@ public class Buttons extends XposedMods {
                 protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
 
                     if (!holdVolumeToTorch) return;
-                    int r = (int) param.args[param.args.length-1];
+                    int r = (int) param.args[param.args.length - 1];
 
                     if (r == 1) {
                         wakeTime = SystemClock.uptimeMillis();
@@ -264,7 +306,7 @@ public class Buttons extends XposedMods {
                     int mCurrentUserId = getIntField(param.thisObject, "mCurrentUserId");
                     if (disablePowerOnLockscreen &&
                             (boolean) callMethod(mBase, "keyguardOn") &&
-                            (boolean) callMethod(mBase, "isKeyguardSecure", mCurrentUserId)){
+                            (boolean) callMethod(mBase, "isKeyguardSecure", mCurrentUserId)) {
                         param.setResult(null);
                     }
                 }
@@ -273,11 +315,6 @@ public class Buttons extends XposedMods {
         } catch (Throwable t) {
             log(t);
         }
-    }
-
-    public static void showPowerMenu() {
-        if (PWMExImpl == null) return;
-        callMethod(PWMExImpl, "overrideShowGlobalActionsInternal");
     }
 
     @Override

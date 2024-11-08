@@ -2,21 +2,14 @@ package it.dhd.oxygencustomizer.ui.fragments;
 
 import static android.content.Context.RECEIVER_EXPORTED;
 
-import static androidx.core.content.FileProvider.getUriForFile;
-
-import android.Manifest;
 import android.annotation.SuppressLint;
 import android.app.DownloadManager;
-import android.app.NotificationChannel;
-import android.app.NotificationManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.database.Cursor;
-import android.icu.util.LocaleData;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Environment;
@@ -33,12 +26,10 @@ import android.widget.TextView;
 
 import androidx.annotation.ColorInt;
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
 import androidx.core.app.NotificationCompat;
 import androidx.core.app.NotificationManagerCompat;
+import androidx.core.content.ContextCompat;
 import androidx.core.content.FileProvider;
-import androidx.fragment.app.Fragment;
-import androidx.preference.PreferenceManager;
 
 import com.topjohnwu.superuser.Shell;
 
@@ -48,7 +39,6 @@ import java.io.InputStreamReader;
 import java.net.URI;
 import java.net.URL;
 import java.util.HashMap;
-import java.util.List;
 
 import javax.security.auth.callback.Callback;
 
@@ -57,15 +47,15 @@ import br.tiagohm.markdownview.css.InternalStyleSheet;
 import br.tiagohm.markdownview.css.styles.Github;
 import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.R;
-import it.dhd.oxygencustomizer.databinding.UpdateFragmentBinding;
+import it.dhd.oxygencustomizer.databinding.FragmentUpdatesBinding;
 import it.dhd.oxygencustomizer.ui.activity.MainActivity;
-import it.dhd.oxygencustomizer.utils.AppUtils;
-import it.dhd.oxygencustomizer.xposed.utils.ExtendedSharedPreferences;
-import it.dhd.oxygencustomizer.xposed.utils.ShellUtils;
+import it.dhd.oxygencustomizer.ui.base.BaseFragment;
+import it.dhd.oxygencustomizer.utils.RootUtil;
+import it.dhd.oxygencustomizer.utils.ThemeUtils;
 
-public class UpdateFragment extends Fragment {
+public class UpdateFragment extends BaseFragment {
+
     public static final String MOD_NAME = "OxygenCustomizer";
-
     public static final String UPDATES_CHANNEL_ID = "Updates";
     private static final String stableUpdatesURL = "https://raw.githubusercontent.com/DHD2280/Oxygen-Customizer/stable/latestStable.json";
     private static final String betaUpdatesURL = "https://raw.githubusercontent.com/DHD2280/Oxygen-Customizer/beta/latestBeta.json";
@@ -116,7 +106,7 @@ public class UpdateFragment extends Fragment {
             }
         }
     };
-    private UpdateFragmentBinding binding;
+    private FragmentUpdatesBinding binding;
     private int currentVersionCode = -1;
     private int currentVersionType = -1;
     private String currentVersionName = "";
@@ -132,7 +122,7 @@ public class UpdateFragment extends Fragment {
         downloadManager = (DownloadManager) requireContext().getSystemService(Context.DOWNLOAD_SERVICE);
 
         //finally
-        binding = UpdateFragmentBinding.inflate(inflater, container, false);
+        binding = FragmentUpdatesBinding.inflate(inflater, container, false);
 
         if (getArguments() != null && getArguments().getBoolean("updateTapped", false)) {
             String downloadPath = getArguments().getString("filePath");
@@ -142,9 +132,19 @@ public class UpdateFragment extends Fragment {
         return binding.getRoot();
     }
 
+    @Override
+    public String getTitle() {
+        return getString(R.string.update);
+    }
+
+    @Override
+    public boolean backButtonEnabled() {
+        return true;
+    }
+
     private void installApk(String downloadPath) {
         Intent promptInstall = new Intent(Intent.ACTION_VIEW).setDataAndType(
-                FileProvider.getUriForFile(getContext(), BuildConfig.APPLICATION_ID + ".provider", new File(downloadPath)),
+                FileProvider.getUriForFile(getContext(), BuildConfig.APPLICATION_ID + ".fileprovider", new File(downloadPath)),
                 "application/vnd.android.package-archive");
         promptInstall.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
         promptInstall.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
@@ -167,9 +167,9 @@ public class UpdateFragment extends Fragment {
         super.onViewCreated(view, savedInstanceState);
 
         //Android 13 requires notification permission to be granted or it won't allow it
-        ShellUtils.execCommand(String.format("pm grant %s android.permission.POST_NOTIFICATIONS", BuildConfig.APPLICATION_ID), true); //will ask root if not granted yet
+        Shell.cmd(String.format("pm grant %s android.permission.POST_NOTIFICATIONS", BuildConfig.APPLICATION_ID)).exec(); //will ask root if not granted yet
 
-        if (!ShellUtils.checkRootPermission()) {
+        if (!RootUtil.isDeviceRooted()) {
             currentVersionName = getString(R.string.root_not_here);
             currentVersionType = -1;
             currentVersionCode = 9999;
@@ -198,10 +198,10 @@ public class UpdateFragment extends Fragment {
                         try {
                             MarkdownView mMarkdownView = view.findViewById(R.id.changelogView);
                             InternalStyleSheet css = new Github();
-                            css.addRule("body, kbd", "background-color: " + intToHex(getColorFromAttribute(requireContext(), R.attr.colorSurfaceContainerHigh)));
-                            css.addRule("body, p, h1, h2, h3, h4, h5, h6, span, div", "color: " + intToHex(getColorFromAttribute(requireContext(), R.attr.colorOnSurface)));
-                            css.addRule("kbd", "border-color: " + intToHex(getColorFromAttribute(requireContext(), R.attr.colorSurfaceContainerHigh)));
-                            css.addRule("kbd", "color: " + intToHex(getColorFromAttribute(requireContext(), R.attr.colorOnSurface)));
+                            css.addRule("body, kbd", "background-color: " + intToHex(ThemeUtils.getAttrColor(requireContext(), R.attr.preferenceBackgroundColor)));
+                            css.addRule("body, p, h1, h2, h3, h4, h5, h6, span, div", "color: " + intToHex(ContextCompat.getColor(requireContext(), R.color.textColorPrimary)));
+                            css.addRule("kbd", "border-color: " + intToHex(ThemeUtils.getAttrColor(requireContext(), R.attr.preferenceBackgroundColor)));
+                            css.addRule("kbd", "color: " + intToHex(ContextCompat.getColor(requireContext(), R.color.textColorPrimary)));
                             css.addRule("a", "color: " + intToHex(getColorFromAttribute(requireContext(), R.attr.colorPrimary)));
                             mMarkdownView.addStyleSheet(css);
                             mMarkdownView.loadMarkdownFromUrl((String) result.get("changelog"));
@@ -341,37 +341,6 @@ public class UpdateFragment extends Fragment {
     public interface TaskDoneCallback extends Callback {
         void onFinished(HashMap<String, Object> result);
     }
-/*    private static class ChangelogReceiver extends Thread {
-        private final TaskDoneCallback mCallback;
-        private final String mURL;
-
-        private ChangelogReceiver(String URL, TaskDoneCallback callback) {
-            mURL = URL;
-            mCallback = callback;
-        }
-
-        @Override
-        public void run()
-        {
-            try {
-                URL changelogData = new URL(mURL);
-                InputStream s = changelogData.openStream();
-
-                BufferedReader in = new BufferedReader(new InputStreamReader(s));
-
-                StringBuilder result = new StringBuilder();
-                String line;
-                while ((line = in.readLine()) != null) {
-                    result.append(line).append("\n");
-                }
-                HashMap<String, Object> returnVal = new HashMap<>();
-                returnVal.put("changelog", result.toString());
-
-                mCallback.onFinished(returnVal);
-            } catch (Exception ignored){}
-        }
-    }
-*/
 
     public static class updateChecker extends Thread {
         private final TaskDoneCallback mCallback;

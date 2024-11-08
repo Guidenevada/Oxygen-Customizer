@@ -16,16 +16,23 @@ package it.dhd.oxygencustomizer.xposed.batterystyles
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.*
-import android.util.TypedValue
+import android.graphics.BlendMode
+import android.graphics.Canvas
+import android.graphics.Color
+import android.graphics.ColorFilter
+import android.graphics.Matrix
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.PixelFormat
+import android.graphics.Rect
+import android.graphics.RectF
+import android.graphics.Typeface
 import androidx.core.graphics.PathParser
 import it.dhd.oxygencustomizer.R
-import it.dhd.oxygencustomizer.xposed.ResourceManager.modRes
-import it.dhd.oxygencustomizer.xposed.hooks.systemui.SettingsLibUtilsProvider
 import kotlin.math.floor
 
 @SuppressLint("DiscouragedApi")
-open class RLandscapeBattery(private val context: Context, frameColor: Int, private val xposed: Boolean) :
+open class RLandscapeBattery(private val context: Context, frameColor: Int) :
     BatteryDrawable() {
 
     // Need to load:
@@ -68,9 +75,6 @@ open class RLandscapeBattery(private val context: Context, frameColor: Int, priv
 
     // To implement hysteresis, keep track of the need to invert the interior icon of the battery
     private var invertFillIcon = false
-
-    // Colors can be configured based on battery level (see res/values/arrays.xml)
-    private var colorLevels: IntArray
 
     private var fillColor: Int = Color.WHITE
     private var backgroundColor: Int = Color.WHITE
@@ -151,9 +155,7 @@ open class RLandscapeBattery(private val context: Context, frameColor: Int, priv
     }
 
     private val errorPaint = Paint(Paint.ANTI_ALIAS_FLAG).also { p ->
-        p.color =
-            if (xposed) SettingsLibUtilsProvider.getColorAttrDefaultColor(context, android.R.attr.colorError)
-            else getColorAttrDefaultColor(context, android.R.attr.colorError, Color.RED)
+        p.color = getColorAttrDefaultColor(context, android.R.attr.colorError)
         p.alpha = 255
         p.isDither = true
         p.strokeWidth = 0f
@@ -179,34 +181,6 @@ open class RLandscapeBattery(private val context: Context, frameColor: Int, priv
         val density = context.resources.displayMetrics.density
         intrinsicHeight = (HEIGHT * density).toInt()
         intrinsicWidth = (WIDTH * density).toInt()
-
-        val res = context.resources
-        val levels = res.obtainTypedArray(
-            res.getIdentifier(
-                "batterymeter_color_levels", "array", context.packageName
-            )
-        )
-        val colors = res.obtainTypedArray(
-            res.getIdentifier(
-                "batterymeter_color_values", "array", context.packageName
-            )
-        )
-        val n = levels.length()
-        colorLevels = IntArray(2 * n)
-        for (i in 0 until n) {
-            colorLevels[2 * i] = levels.getInt(i, 0)
-            if (colors.getType(i) == TypedValue.TYPE_ATTRIBUTE) {
-                colorLevels[2 * i + 1] =
-                    if (xposed) SettingsLibUtilsProvider.getColorAttrDefaultColor(
-                                    colors.getResourceId(i, 0), context
-                                )
-                    else getColorAttrDefaultColor(context, colors.getResourceId(i, 0), Color.WHITE)
-            } else {
-                colorLevels[2 * i + 1] = colors.getColor(i, 0)
-            }
-        }
-        levels.recycle()
-        colors.recycle()
 
         loadPaths()
     }
@@ -295,7 +269,7 @@ open class RLandscapeBattery(private val context: Context, frameColor: Int, priv
             textPaint.color = fillColor
             c.drawText(batteryLevel.toString(), pctX, pctY, textPaint)
 
-            textPaint.color = fillColor.toInt().inv() or 0xFF000000.toInt()
+            textPaint.color = fillColor.inv() or 0xFF000000.toInt()
             c.save()
             c.clipRect(
                 fillRect.left,
@@ -319,13 +293,13 @@ open class RLandscapeBattery(private val context: Context, frameColor: Int, priv
         var thresh: Int
         var color = 0
         var i = 0
-        while (i < colorLevels.size) {
-            thresh = colorLevels[i]
-            color = colorLevels[i + 1]
+        while (i < colorForLevels.size) {
+            thresh = colorForLevels[i]
+            color = colorForLevels[i + 1]
             if (level <= thresh) {
 
                 // Respect tinting for "normal" level
-                return if (i == colorLevels.size - 2) {
+                return if (i == colorForLevels.size - 2) {
                     fillColor
                 } else {
                     color
@@ -447,32 +421,27 @@ open class RLandscapeBattery(private val context: Context, frameColor: Int, priv
     @SuppressLint("RestrictedApi")
     private fun loadPaths() {
         val pathString =
-            if (xposed) modRes.getString(R.string.config_landscapeBatteryPerimeterCustomR)
-            else context.getString(R.string.config_landscapeBatteryPerimeterCustomR)
+            getResources(context).getString(R.string.config_landscapeBatteryPerimeterCustomR)
         perimeterPath.set(PathParser.createPathFromPathData(pathString))
         perimeterPath.computeBounds(RectF(), true)
 
         val errorPathString =
-            if (xposed) modRes.getString(R.string.config_landscapeBatteryErrorCustomR)
-            else context.getString(R.string.config_landscapeBatteryErrorCustomR)
+            getResources(context).getString(R.string.config_landscapeBatteryErrorCustomR)
         errorPerimeterPath.set(PathParser.createPathFromPathData(errorPathString))
         errorPerimeterPath.computeBounds(RectF(), true)
 
         val fillMaskString =
-            if (xposed) modRes.getString(R.string.config_landscapeBatteryFillMaskCustomR)
-            else context.getString(R.string.config_landscapeBatteryFillMaskCustomR)
+            getResources(context).getString(R.string.config_landscapeBatteryFillMaskCustomR)
         fillMask.set(PathParser.createPathFromPathData(fillMaskString))
         // Set the fill rect so we can calculate the fill properly
         fillMask.computeBounds(fillRect, true)
 
         val boltPathString =
-            if (xposed) modRes.getString(R.string.config_landscapeBatteryBoltCustomR)
-            else context.getString(R.string.config_landscapeBatteryBoltCustomR)
+            getResources(context).getString(R.string.config_landscapeBatteryBoltCustomR)
         boltPath.set(PathParser.createPathFromPathData(boltPathString))
 
         val plusPathString =
-            if (xposed) modRes.getString(R.string.config_landscapeBatteryPlusCustomR)
-            else context.getString(R.string.config_landscapeBatteryPlusCustomR)
+            getResources(context).getString(R.string.config_landscapeBatteryPlusCustomR)
         plusPath.set(PathParser.createPathFromPathData(plusPathString))
 
         dualTone = false

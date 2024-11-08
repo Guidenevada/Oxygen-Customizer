@@ -2,8 +2,6 @@ package it.dhd.oxygencustomizer.ui.fragments;
 
 import static it.dhd.oxygencustomizer.utils.Constants.Packages.FRAMEWORK;
 import static it.dhd.oxygencustomizer.utils.Constants.Packages.SYSTEM_UI;
-import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
-import static it.dhd.oxygencustomizer.xposed.utils.BootLoopProtector.LOAD_TIME_KEY_KEY;
 import static it.dhd.oxygencustomizer.xposed.utils.BootLoopProtector.PACKAGE_STRIKE_KEY_KEY;
 
 import android.content.BroadcastReceiver;
@@ -14,75 +12,70 @@ import android.content.IntentFilter;
 import android.content.ServiceConnection;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.content.res.ColorStateList;
 import android.graphics.drawable.Drawable;
 import android.os.Bundle;
 import android.os.CountDownTimer;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.style.ForegroundColorSpan;
+import android.util.Log;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
+import android.view.Menu;
 import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.PopupMenu;
 import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.appcompat.widget.PopupMenu;
 import androidx.core.content.ContextCompat;
-import androidx.fragment.app.Fragment;
+import androidx.core.view.MenuHost;
+import androidx.core.view.MenuProvider;
+import androidx.lifecycle.Lifecycle;
 
-import com.google.android.material.button.MaterialButton;
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.topjohnwu.superuser.Shell;
 import com.topjohnwu.superuser.ipc.RootService;
 
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Calendar;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
 import it.dhd.oxygencustomizer.IRootProviderService;
+import it.dhd.oxygencustomizer.OxygenCustomizer;
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.databinding.FragmentHooksBinding;
 import it.dhd.oxygencustomizer.services.RootProvider;
+import it.dhd.oxygencustomizer.ui.base.BaseFragment;
 import it.dhd.oxygencustomizer.utils.AppUtils;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.utils.PreferenceHelper;
-import it.dhd.oxygencustomizer.xposed.utils.BootLoopProtector;
 
-public class Hooks extends Fragment {
+public class Hooks extends BaseFragment {
 
     private FragmentHooksBinding binding;
     private final String TAG = getClass().getSimpleName();
     IntentFilter intentFilterHookedPackages = new IntentFilter();
     private final List<String> hookedPackageList = new ArrayList<>();
     private List<String> monitorPackageList;
-    private final String LSPosedDB = "/data/adb/lspd/config/modules_config.db";
     private int dotCount = 0;
     private ServiceConnection mCoreRootServiceConnection;
     private IRootProviderService mRootServiceIPC = null;
-    private boolean rebootPending = false;
     private final String reboot_key = "reboot_pending";
 
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         binding = FragmentHooksBinding.inflate(inflater, container, false);
-
-        if (savedInstanceState != null) {
-            rebootPending = savedInstanceState.getBoolean(reboot_key);
-        }
-
-        //binding.rebootButton.setOnClickListener(view -> AppUtils.Restart("system"));
-
-        if (!rebootPending) {
-            binding.rebootButton.hide();
-        }
 
         startRootService();
 
@@ -114,7 +107,7 @@ public class Hooks extends Fragment {
         }
 
         intentFilterHookedPackages.addAction(Constants.ACTION_XPOSED_CONFIRMED);
-        getContext().registerReceiver(receiverHookedPackages, intentFilterHookedPackages, Context.RECEIVER_EXPORTED);
+        requireContext().registerReceiver(receiverHookedPackages, intentFilterHookedPackages, Context.RECEIVER_EXPORTED);
         monitorPackageList = Arrays.asList(getResources().getStringArray(R.array.xposed_scope));
         checkHookedPackages();
 
@@ -138,7 +131,7 @@ public class Hooks extends Fragment {
                     if (pkgName.equals(broadcastPackageName)) {
                         binding.content.post(() -> {
                             desc.setText(getText(R.string.package_hooked_successful));
-                            desc.setTextColor(getContext().getColor(android.R.color.system_accent1_400));
+                            desc.setTextColor(requireContext().getColor(android.R.color.system_accent1_400));
                         });
                     }
                 }
@@ -178,7 +171,7 @@ public class Hooks extends Fragment {
         hookedPackageList.clear();
 
         initListItem(monitorPackageList);
-        new Thread(() -> getContext().sendBroadcast(new Intent().setAction(Constants.ACTION_CHECK_XPOSED_ENABLED))).start();
+        new Thread(() -> requireContext().sendBroadcast(new Intent().setAction(Constants.ACTION_CHECK_XPOSED_ENABLED))).start();
         waitAndRefresh();
     }
 
@@ -212,33 +205,13 @@ public class Hooks extends Fragment {
                 desc.setText(getString(R.string.package_checking, ""));
             } else {
                 desc.setText(getText(R.string.package_not_found));
-                desc.setTextColor(getContext().getColor(com.google.android.material.R.color.design_default_color_error));
+                desc.setTextColor(requireContext().getColor(com.google.android.material.R.color.design_default_color_error));
             }
 
             ImageView preview = list.findViewById(R.id.icon);
             preview.setImageDrawable(getAppIcon(pack.get(i)));
 
             int finalI = i;
-
-            MaterialButton activateInLSPosed = list.findViewById(R.id.activate_in_lsposed);
-            activateInLSPosed.setOnClickListener(view -> {
-                activateInLSPosed.setEnabled(false);
-                try {
-                    if (mRootServiceIPC.activateInLSPosed(pack.get(finalI))) {
-                        activateInLSPosed.animate().setDuration(300).withEndAction(() -> activateInLSPosed.setVisibility(View.GONE)).start();
-                        Toast.makeText(getContext(), getText(R.string.package_activated), Toast.LENGTH_SHORT).show();
-                        binding.rebootButton.show();
-                        rebootPending = true;
-                    } else {
-                        Toast.makeText(getContext(), getText(R.string.package_activation_failed), Toast.LENGTH_SHORT).show();
-                        activateInLSPosed.setEnabled(true);
-                    }
-                } catch (RemoteException e) {
-                    Toast.makeText(getContext(), getText(R.string.package_activation_failed), Toast.LENGTH_SHORT).show();
-                    activateInLSPosed.setEnabled(true);
-                    e.printStackTrace();
-                }
-            });
 
             list.setOnClickListener(view -> {
                 // show ripple effect and do nothing
@@ -252,15 +225,15 @@ public class Hooks extends Fragment {
                 int itemId = item.getItemId();
 
                 if (itemId == R.id.launch_app) {
-                    Intent intent = getContext()
+                    Intent intent = requireContext()
                             .getPackageManager()
                             .getLaunchIntentForPackage(pack.get(finalI));
                     if (intent != null) {
                         startActivity(intent);
                     } else {
                         Toast.makeText(
-                                getContext(),
-                                getContext().getString(R.string.package_not_launchable),
+                                requireContext(),
+                                OxygenCustomizer.getAppContextLocale().getString(R.string.package_not_launchable),
                                 Toast.LENGTH_SHORT
                         ).show();
                     }
@@ -290,7 +263,7 @@ public class Hooks extends Fragment {
                     "killall " + packageName,
                     "am force-stop " + packageName
             ).exec();
-            Intent intent = getContext()
+            Intent intent = requireContext()
                     .getPackageManager()
                     .getLaunchIntentForPackage(packageName);
             if (intent != null) {
@@ -307,24 +280,16 @@ public class Hooks extends Fragment {
 
             if (hookedPackageList.contains(pkgName)) {
                 desc.setText(getText(R.string.package_hooked_successful));
-                desc.setTextColor(getContext().getColor(android.R.color.system_accent1_400));
+                desc.setTextColor(requireContext().getColor(android.R.color.system_accent1_400));
             } else {
-                desc.setTextColor(getContext().getColor(R.color.error));
+                desc.setTextColor(requireContext().getColor(R.color.error));
 
                 desc.setText(getText(
                         isAppInstalled(pkgName)
-                                ? checkLSPosedDB(pkgName)
                                 ? isBootLooped(pkgName)
                                 ? R.string.package_hook_bootlooped
                                 : R.string.package_hook_no_response
-                                : R.string.package_not_hook_enabled
                                 : R.string.package_not_found));
-            }
-
-            if (desc.getText() == getText(R.string.package_not_hook_enabled)) {
-                MaterialButton activateInLSPosed = list.findViewById(R.id.activate_in_lsposed);
-                activateInLSPosed.setVisibility(View.VISIBLE);
-                activateInLSPosed.setEnabled(true);
             }
         }
     }
@@ -339,33 +304,19 @@ public class Hooks extends Fragment {
 
     private Drawable getAppIcon(String packageName) {
         try {
-            return getContext().getPackageManager().getApplicationIcon(packageName);
+            return requireContext().getPackageManager().getApplicationIcon(packageName);
         } catch (PackageManager.NameNotFoundException ignored) {
-            return ContextCompat.getDrawable(getContext(), R.drawable.ic_android);
-        }
-    }
-
-    private boolean checkLSPosedDB(String pkgName) {
-        try {
-            return mRootServiceIPC.checkLSPosedDB(pkgName);
-        } catch (RemoteException e) {
-            return false;
+            return ContextCompat.getDrawable(requireContext(), R.drawable.ic_android);
         }
     }
 
     private boolean isBootLooped(String pkgName) {
         if (PreferenceHelper.getModulePrefs() != null) {
             SharedPreferences prefs = PreferenceHelper.getModulePrefs();
-            String loadTimeKey = String.format("%s%s", LOAD_TIME_KEY_KEY, pkgName);
             String strikeKey = String.format("%s%s", PACKAGE_STRIKE_KEY_KEY, pkgName);
-            long currentTime = Calendar.getInstance().getTime().getTime();
-            long lastLoadTime = prefs.getLong(loadTimeKey, 0);
             int strikeCount = prefs.getInt(strikeKey, 0);
 
-            if (strikeCount >= 3) {
-                return true;
-            }
-            return false;
+            return strikeCount >= 3;
         }
         return false;
     }
@@ -374,44 +325,64 @@ public class Hooks extends Fragment {
         return (int) TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, dp, context.getResources().getDisplayMetrics());
     }
 
-    @SuppressWarnings("unused")
-    public static class StringBooleanMap {
-        private final HashMap<String, Boolean> map = new HashMap<>();
+    @Override
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+            MenuHost menuHost = requireActivity();
+            // Add menu items without using the Fragment Menu APIs
+            // Note how we can tie the MenuProvider to the viewLifecycleOwner
+            // and an optional Lifecycle.State (here, RESUMED) to indicate when
+            // the menu should be visible
+            menuHost.addMenuProvider(new MenuProvider() {
+                @Override
+                public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+                    // Add menu items here
+                    menu.add(0, 1, 0, R.string.info_hooks)
+                            .setIcon(R.drawable.settingslib_ic_info_outline_24)
+                            .setIconTintList(ColorStateList.valueOf(ContextCompat.getColor(requireContext(), R.color.textColorPrimary)))
+                            .setShowAsAction(MenuItem.SHOW_AS_ACTION_IF_ROOM);
+                }
 
-        public void put(String key, boolean value) {
-            map.put(key, value);
-        }
-
-        public boolean get(String key) {
-            Boolean value = map.get(key);
-            return value != null ? value : false;
-        }
-
-        public boolean containsKey(String key) {
-            return map.containsKey(key);
-        }
-
-        public void remove(String key) {
-            map.remove(key);
-        }
-
-        public void clear() {
-            map.clear();
-        }
+                @Override
+                public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+                    // Handle the menu selection
+                    if (menuItem.getItemId() == 1) {
+                        showInfoDialog();
+                        return true;
+                    }
+                    return true;
+                }
+            }, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
     }
 
-    @Override
-    public void onSaveInstanceState(@NonNull Bundle outState) {
-        outState.putBoolean(reboot_key, rebootPending);
-        super.onSaveInstanceState(outState);
+    private void showInfoDialog() {
+        MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(requireContext());
+        builder.setTitle(R.string.info_hooks);
+        builder.setMessage(getSpannedDescription());
+        builder.setPositiveButton(android.R.string.ok, (dialog, which) -> dialog.dismiss());
+        builder.show();
     }
 
-    @Override
-    public void onViewStateRestored(@Nullable Bundle savedInstanceState) {
-        super.onViewStateRestored(savedInstanceState);
-        if (savedInstanceState != null) {
-            rebootPending = savedInstanceState.getBoolean(reboot_key);
+    private SpannableStringBuilder getSpannedDescription() {
+        String description = getString(R.string.info_hooks_desc);
+        int startSpan = 0, endSpan = 0;
+        SpannableStringBuilder spannableStringBuilder = new SpannableStringBuilder(description);
+        List<Object[]> targets = new ArrayList<>();
+        targets.add(new Object[]{getString(R.string.package_hooked_successful), requireContext().getColor(android.R.color.system_accent1_400)});
+        targets.add(new Object[]{getString(R.string.package_hook_no_response), requireContext().getColor(R.color.error)});
+        targets.add(new Object[]{getString(R.string.package_hook_bootlooped), requireContext().getColor(R.color.error)});
+        for (Object[] target : targets) {
+            String targetText = (String) target[0];
+            int color = (int) target[1];
+            Log.i(TAG, "getSpannedDescription: " + targetText);
+            int startIndex = description.indexOf(targetText);
+            int endIndex = startIndex + targetText.length();
+
+            if (startIndex != -1) {
+                spannableStringBuilder.setSpan(new ForegroundColorSpan(color), startIndex, endIndex, Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
         }
+        return spannableStringBuilder;
     }
 
     @Override
@@ -424,9 +395,19 @@ public class Hooks extends Fragment {
     public void onDestroy() {
         super.onDestroy();
         try {
-            getContext().unregisterReceiver(receiverHookedPackages);
+            requireContext().unregisterReceiver(receiverHookedPackages);
         } catch (Exception ignored) {
         }
         countDownTimer.cancel();
+    }
+
+    @Override
+    public String getTitle() {
+        return getString(R.string.hooks_title);
+    }
+
+    @Override
+    public boolean backButtonEnabled() {
+        return true;
     }
 }

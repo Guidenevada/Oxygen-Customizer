@@ -10,9 +10,11 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 
+import java.util.List;
+
 import it.dhd.oxygencustomizer.R;
-import it.dhd.oxygencustomizer.customprefs.ListWithPopUpPreference;
 import it.dhd.oxygencustomizer.ui.base.ControlledPreferenceFragmentCompat;
+import it.dhd.oxygencustomizer.ui.preferences.ListWithPopUpPreference;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.utils.PreferenceHelper;
 
@@ -21,6 +23,7 @@ public class Gesture extends ControlledPreferenceFragmentCompat {
     FrameLayout leftBackGestureIndicator, rightBackGestureIndicator;
     FrameLayout leftSwipeGestureIndicator, rightSwipeGestureIndicator;
     private ListWithPopUpPreference mOverrideBackLeft, mOverrideBackRight;
+    int navigationBarHeight = 0;
 
     @Override
     public String getTitle() {
@@ -91,9 +94,9 @@ public class Gesture extends ControlledPreferenceFragmentCompat {
             int displayHeight = requireActivity().getWindowManager().getCurrentWindowMetrics().getBounds().height();
             int displayWidth = requireActivity().getWindowManager().getCurrentWindowMetrics().getBounds().width();
 
-            float leftSwipeUpPercentage = mPreferences.getSliderFloat("gesture_left_height", 25);
+            float leftSwipeUpPercentage = mPreferences.getSliderFloat("gesture_left_height_double", 25);
 
-            float rightSwipeUpPercentage = mPreferences.getSliderFloat("gesture_right_height", 25);
+            float rightSwipeUpPercentage = mPreferences.getSliderFloat("gesture_right_height_double", 25);
 
             int edgeWidth = Math.round(displayWidth * leftSwipeUpPercentage / 100f);
             ViewGroup.LayoutParams lp = leftSwipeGestureIndicator.getLayoutParams();
@@ -108,25 +111,43 @@ public class Gesture extends ControlledPreferenceFragmentCompat {
             setVisibility(rightSwipeGestureIndicator, false, 400);
             setVisibility(leftSwipeGestureIndicator, false, 400);
 
-            setVisibility(rightBackGestureIndicator, PreferenceHelper.isVisible("gesture_right_height"), 400);
-            setVisibility(leftBackGestureIndicator, PreferenceHelper.isVisible("gesture_left_height"), 400);
+            setVisibility(rightBackGestureIndicator, PreferenceHelper.isVisible("gesture_right_height_double"), 400);
+            setVisibility(leftBackGestureIndicator, PreferenceHelper.isVisible("gesture_left_height_double"), 400);
 
-            int edgeHeight = Math.round(displayHeight * mPreferences.getSliderInt("gesture_right_height", 100) / 100f);
-            lp = rightBackGestureIndicator.getLayoutParams();
-            lp.height = edgeHeight;
-            rightBackGestureIndicator.setLayoutParams(lp);
+            List<Float> prefs = mPreferences.getSliderValues("gesture_right_height_double", 100f);
+            int bottomMargin, topMargin;
+            if (prefs.size() == 2) {
+                bottomMargin = Math.round(displayHeight * prefs.get(0) / 100f);
+                topMargin = Math.round(displayHeight - displayHeight * prefs.get(1) / 100f);
+            } else {
+                bottomMargin = 0;
+                topMargin = Math.round(displayHeight * prefs.get(0) / 100f);
+            }
+            FrameLayout.LayoutParams layoutParams = new FrameLayout.LayoutParams(50, ViewGroup.LayoutParams.MATCH_PARENT);
+            layoutParams.gravity = Gravity.RIGHT | Gravity.BOTTOM;
+            layoutParams.topMargin = topMargin;
+            layoutParams.bottomMargin = bottomMargin;
+            rightBackGestureIndicator.setLayoutParams(layoutParams);
 
-            edgeHeight = Math.round(displayHeight * mPreferences.getSliderInt("gesture_left_height", 100) / 100f);
-            lp = leftBackGestureIndicator.getLayoutParams();
-            lp.height = edgeHeight;
-            leftBackGestureIndicator.setLayoutParams(lp);
+            prefs = mPreferences.getSliderValues("gesture_left_height_double", 100f);
+            if (prefs.size() == 2) {
+                bottomMargin = Math.round(displayHeight * prefs.get(0) / 100f);
+                topMargin = Math.round(displayHeight - displayHeight * prefs.get(1) / 100f);
+            } else {
+                bottomMargin = 0;
+                topMargin = Math.round(displayHeight * prefs.get(0) / 100f);
+            }
+            layoutParams = new FrameLayout.LayoutParams(50, ViewGroup.LayoutParams.MATCH_PARENT);
+            layoutParams.gravity = Gravity.LEFT | Gravity.BOTTOM;
+            layoutParams.topMargin = topMargin;
+            layoutParams.bottomMargin = bottomMargin;
+            leftBackGestureIndicator.setLayoutParams(layoutParams);
 
         } catch (Exception ignored) {
         }
     }
 
     private FrameLayout prepareSwipeGestureView(int gravity) {
-        int navigationBarHeight = 0;
         @SuppressLint({"DiscouragedApi", "InternalInsetResource"})
         int resourceId = getResources().getIdentifier("navigation_bar_height", "dimen", "android");
         if (resourceId > 0) {
@@ -135,7 +156,7 @@ public class Gesture extends ControlledPreferenceFragmentCompat {
 
         FrameLayout result = new FrameLayout(requireContext());
         FrameLayout.LayoutParams lp = new FrameLayout.LayoutParams(0, navigationBarHeight);
-        lp.gravity = gravity | Gravity.BOTTOM;
+        lp.gravity = gravity | Gravity.CENTER_VERTICAL;
         lp.bottomMargin = 0;
         result.setLayoutParams(lp);
 

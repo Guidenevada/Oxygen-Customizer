@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Xposed Description -->
+    <string name="xposeddescription">Dostosuj Oxygen OS</string>
+    <!-- Preferences Strings -->
+    <string name="default_value">Domyślnie</string>
+    <string name="settingslib_learn_more_text">Dowiedz się więcej</string>
+    <string name="settings_label">Ustawienia</string>
+    <string name="toast_rename_file">Zmień nazwę pliku na coś prostszego</string>
+    <string name="toast_applied">Zastosowano</string>
+    <string name="toast_disabled">Wył.</string>
+    <string name="toast_error">Coś poszło nie tak</string>
+    <string name="opt_selected1">Wybrano: %s</string>
+    <string name="opt_selected2">Wybrano: %s%s</string>
+    <string name="requires_sysui_restart">Ta sekcja wymaga ponownego uruchomienia SystemUI\nDotknij menu, aby uruchomić ponownie.</string>
+    <!-- Onboarding -->
+    <string name="init_module_installation">Rozpoczynanie instalacji</string>
+    <string name="step">Etap</string>
+    <string name="module_installation_step1">Tworzenie powłoki modułu</string>
+    <string name="module_installation_step2">Wypakowywanie wymaganych plików</string>
+    <string name="module_installation_step3">Tworzenie dodatkowych APK</string>
+    <string name="module_installation_step4">Wyrównywanie nakładek APK</string>
+    <string name="module_installation_step5">Podpisywanie nakładek APK</string>
+    <string name="module_installation_step6">Czyszczenie katalogów</string>
+    <string name="onboarding_title_1">Znudził cię standardowy wygląd systemu?</string>
+    <string name="onboarding_subtitle_1">Spersonalizujmy wszystko według naszych preferencji.</string>
+    <string name="onboarding_desc_1">Zapomnij o monotonii standardowego interfejsu – spersonalizuj każdy szczegół zgodnie ze swoim stylem i preferencjami.</string>
+    <string name="onboarding_title_2">Czy moje urządzenie jest wspierane?</string>
+    <string name="onboarding_subtitle_2">Oxygen Customizer obsługuje urządzenia pracujące w oparciu o OxygenOS.</string>
+    <string name="onboarding_desc_2">Kompatybilny z każdym systemem opartym o OxygenOS, dzięki czemu zapewnia wsparcie dla szerokiej grupy urządzeń z Androidem.</string>
+    <string name="onboarding_title_3">Możemy zaczynać?</string>
+    <string name="onboarding_subtitle_3">Nadszedł czas, aby Oxygen Customizer wykonał pewne wewnętrzne zadania.</string>
+    <string name="onboarding_desc_3">Rozpoczęcie zadań wewnętrznych oznacza start wymaganych prac w systemie. Zaczynamy?</string>
+    <string name="need_storage_perm_title">Brak uprawnień dostępu do pamięci</string>
+    <string name="need_storage_perm_desc">Uprawnienia dostępu do pamięci są niezbędne do stworzenia wymaganych plików.</string>
+    <string name="compatible_root_not_found_title">Nie można znaleźć kompatybilnego roota</string>
+    <string name="compatible_root_not_found_desc">Użyj dowolnej nieprzestarzałe metody rootowania, aby kontynuować.</string>
+    <string name="root_not_found_title">Root jest niedostępny</string>
+    <string name="root_not_found_desc">Wygląda na to, że Twoje urządzenie nie jest zrootowane!</string>
+    <string name="need_reboot_title">Wymagany restart urządzenia</string>
+    <string name="need_reboot_desc">Zrestartuj urządzenie, aby zainstalować wszystkie pliki.</string>
+    <string name="installation_failed_title">Ups, stało się coś dziwnego</string>
+    <string name="installation_failed_desc">Logi zostały zapisane w folderze /documents.</string>
+    <string name="logs">Logi</string>
+    <string name="toast_skipped_installation">Instalacja pominięta. Niektóre funkcje mogą nie działać prawidłowo.</string>
+    <!-- Buttons -->
+    <string name="btn_select">Wybierz</string>
+    <string name="btn_skip">Pomiń</string>
+    <string name="btn_next">Nast.</string>
+    <string name="btn_back">Wstecz</string>
+    <string name="btn_lets_go">Do dzieła</string>
+    <string name="btn_close">Zamknij</string>
+    <string name="btn_cancel">Anuluj</string>
+    <string name="btn_reboot_now">Uruchom ponownie teraz</string>
+    <string name="btn_reboot">Uruchom ponownie</string>
+    <string name="btn_enable">Włącz</string>
+    <string name="btn_disable">Wyłącz</string>
+    <string name="btn_apply">Zastosuj</string>
+    <!-- Dialogs -->
+    <string name="installing">Instalowanie</string>
+    <string name="loading_dialog_wait">Proszę czekać</string>
+    <!-- Main Activity -->
+    <!-- App kill Alert -->
+    <string name="app_kill_alert_title">Uwaga</string>
+    <string name="app_kill_ok_btn">OK</string>
+    <!-- Reboot alert -->
+    <string name="reboot_alert_body">Do zastosowania ustawień wymagane jest ponowne uruchomienie systemu</string>
+    <!-- General Strings -->
+    <string name="battery_charging">Ładowanie baterii</string>
+    <string name="battery_discharging">Rozładowanie baterii</string>
+    <string name="battery_full">Bateria naładowana</string>
+    <string name="battery_level_percentage">Poziom baterii</string>
+    <string name="seconds">Sekundy</string>
+    <string name="milliseconds">Milisekundy</string>
+    <string name="general_color_accent1">Akcent 1</string>
+    <string name="general_color_accent2">Akcent 2</string>
+    <string name="general_color_accent3">Akcent 3</string>
+    <string name="general_color_text1">Tekst 1</string>
+    <string name="general_color_text2">Tekst 2</string>
+    <!-- Image Crop Strings -->
+    <!-- Search Preference -->
+    <string name="searchpreference_search">Szukaj…</string>
+    <string name="searchpreference_clear">Wyczyść</string>
+    <string name="searchpreference_more">Więcej</string>
+    <string name="searchpreference_clear_history">Wyczyść historię</string>
+    <string name="searchpreference_no_results">Brak wyników</string>
+    <!-- Menu Strings -->
+    <string name="restart_scopes"></string>
+    <!-- NavBar Strings -->
+    <string name="navbar_mods">Modyfikacje</string>
+    <string name="navbar_settings">Ustawienia</string>
+    <!-- Mods Strings -->
+    <string name="mods_title">Modyfikacje</string>
+    <string name="statusbar_title">Pasek stanu</string>
+    <string name="launcher_title">Launcher</string>
+    <string name="quick_settings_title">Szybkie ustawienia</string>
+    <string name="sound">Dźwięk</string>
+    <string name="misc">Różne</string>
+    <string name="package_manager">Menedżer pakietów</string>
+    <!-- General Strings -->
+    <string name="accent_color">Kolor akcentu</string>
+    <!-- Statusbar Strings -->
+    <!-- Statusbar notification strings -->
+    <!-- Text to use when the number in a notification info is too large -->
+    <!-- Statusbar Clock Strings -->
+    <!-- Status bar - Clock -->
+    <!-- Status bar padding -->
+    <!-- Battery Bar Strings -->
+    <!-- Battery Icon Strings -->
+    <!-- Battery Stock Prefs -->
+    <!-- Battery Icon Styles -->
+    <!-- Statusbar Icons Strings -->
+    <!-- Quick Settings Mods -->
+    <!-- Quick Settings Tiles -->
+    <!-- Quick Settings Widgets -->
+    <!-- Quick Settings Tiles Customizations -->
+    <!-- QS Tile Radius -->
+    <!-- Media Tile -->
+    <!-- QS Tiles animation -->
+    <!-- QS Page Transitions -->
+    <!-- QS Header Image Strings -->
+    <!-- Omni Provider" -->
+    <!-- QS Header Clock Strings -->
+    <!-- Qs Header Per Clock Prefs -->
+    <!-- Hour only color -->
+    <!-- Time color -->
+    <!-- Separator Color, Only for first clock -->
+    <!-- QS Header Clock Margins -->
+    <!-- QS Header Misc -->
+    <!-- Chip Styles Strings -->
+    <!-- Launcher Mods -->
+    <!-- NavBar Strings -->
+    <!-- Gesture Strings -->
+    <!-- Gesture Pill Strings -->
+    <!-- Buttons Title -->
+    <!-- Lockscreen Strings -->
+    <!-- Media art -->
+    <!-- Album art filter -->
+    <!-- Depth Effect Alert -->
+    <!-- Lockscreen Clock Strings -->
+    <!-- Lockscreen 9 Strings -->
+    <!-- Aod Strings -->
+    <!-- Aod Clock -->
+    <!-- Aod Weather -->
+    <!-- Sound Mods -->
+    <!-- Pulse music visualizer -->
+    <!-- Pulse Gravity n Mirror Options -->
+    <!-- Fluid Music -->
+    <!-- Volume Steps -->
+    <!-- Adaptive Playback -->
+    <!-- Volume panel -->
+    <!-- Volume Panel Customizations -->
+    <!-- Volume Styles -->
+    <!-- Package Manager -->
+    <!-- Misc Strings -->
+    <!-- Hooks Fragment -->
+    <!-- Update Fragment -->
+    <!-- Advanced Reboot -->
+    <!-- Own Settings -->
+    <!-- Omni Jaws Strings -->
+    <!-- Lockscreen Weather styles -->
+    <!-- Weather -->
+    <!-- UI Strings -->
+    <!-- UI styles -->
+    <!-- Icon pack -->
+    <!-- Settings Icons -->
+    <!-- Notification -->
+    <!-- Notification Corner Radius -->
+    <!-- USB Dialog -->
+    <!-- Toast Styles -->
+    <!-- Style List -->
+    <!-- Dark Mode -->
+    <!-- Lockscreen Widgets -->
+    <!-- LS Widgets Actions -->
+    <!-- Lag Fix Strings -->
+    <!-- Caffeine -->
+    <!-- Colors Fragment -->
+    <!-- Pocket Studio -->
+    <!-- OTA Card -->
+    <!-- MEMC Strings -->
+</resources>

@@ -9,7 +9,6 @@ import android.content.Context;
 import android.content.res.ColorStateList;
 import android.content.res.Resources;
 import android.content.res.TypedArray;
-import android.graphics.BlurMaskFilter;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.Typeface;
@@ -168,6 +167,16 @@ public class ViewHelper {
             }
         } else {
             checkTagAndChangeColor(view, tagContains, color);
+        }
+    }
+
+    public static void recursivelyChangeViewColor(View v, int color) {
+        if (v instanceof ViewGroup vg) {
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                recursivelyChangeViewColor(vg.getChildAt(i), color);
+            }
+        } else {
+            changeViewColor(v, color);
         }
     }
 
@@ -346,17 +355,17 @@ public class ViewHelper {
         }
 
         boolean isXposedMode = true;
-        int currentStyleIndex;
         try {
-            currentStyleIndex = Xprefs.getInt(LOCKSCREEN_CLOCK_STYLE, 0);
+            Xprefs.getInt(LOCKSCREEN_CLOCK_STYLE, 0);
         } catch (Throwable ignored) {
             if (styleIndex == null) {
                 throw new IllegalStateException("Parameter \"styleIndex\" cannot be null");
             }
             isXposedMode = false;
-            currentStyleIndex = styleIndex;
         }
-        String rawResName = "lottie_lockscreen_clock_" + currentStyleIndex;
+        String rawResName = "lottie_lockscreen_clock_" + styleIndex;
+
+        Log.d("Oxygen Customizer Loading Lottie", "Loading Lottie Animation: " + rawResName + " (Style: " + styleIndex + ")");
 
         Object lottieAnimView;
         if (isXposedMode) {
@@ -399,7 +408,7 @@ public class ViewHelper {
         if (isXposedMode) {
             try {
                 callMethod(lottieAnimView, "setLayoutParams", animationParams);
-                callMethod(lottieAnimView, "setAnimation", rawRes, "cacheKey");
+                callMethod(lottieAnimView, "setAnimation", rawRes, "cacheKey_" + styleIndex);
                 callMethod(lottieAnimView, "setRepeatCount", LottieDrawable.INFINITE);
                 callMethod(lottieAnimView, "setScaleType", ImageView.ScaleType.FIT_CENTER);
                 callMethod(lottieAnimView, "setAdjustViewBounds", true);
@@ -409,7 +418,7 @@ public class ViewHelper {
         } else {
             LottieAnimationView lottieAnimationView = (LottieAnimationView) lottieAnimView;
             lottieAnimationView.setLayoutParams(animationParams);
-            lottieAnimationView.setAnimation(rawRes, "cacheKey");
+            lottieAnimationView.setAnimation(rawRes, "cacheKey_" + styleIndex);
             lottieAnimationView.setRepeatCount(LottieDrawable.INFINITE);
             lottieAnimationView.setRenderMode(RenderMode.HARDWARE);
             lottieAnimationView.setScaleType(ImageView.ScaleType.FIT_CENTER);
@@ -430,4 +439,52 @@ public class ViewHelper {
         }
 
     }
+
+    public static View findViewWithTag(View view, String tag) {
+        if (view == null) {
+            return null;
+        }
+
+        if (view instanceof ViewGroup viewGroup) {
+            if (viewGroup.getTag() != null && viewGroup.getTag().toString().contains(tag)) {
+                return viewGroup;
+            }
+            for (int i = 0; i < viewGroup.getChildCount(); i++) {
+                View child = viewGroup.getChildAt(i);
+
+                View result = findViewWithTag(child, tag);
+                if (result != null) {
+                    return result;
+                }
+            }
+        } else {
+            if (view.getTag() != null && view.getTag().toString().contains(tag)) {
+                return view;
+            }
+        }
+        return null;
+    }
+
+    public static LayerDrawable getChip(int gradientOrientation, int[] colors, int strokeWidth, int strokeColor, float[] cornerRadii) {
+        GradientDrawable gradient = new GradientDrawable();
+        gradient.setShape(GradientDrawable.RECTANGLE);
+        gradient.setGradientType(GradientDrawable.LINEAR_GRADIENT);
+        GradientDrawable.Orientation orientation = switch (gradientOrientation) {
+            case 1 -> GradientDrawable.Orientation.TOP_BOTTOM;
+            case 2 -> GradientDrawable.Orientation.TL_BR;
+            case 3 -> GradientDrawable.Orientation.TR_BL;
+            default -> GradientDrawable.Orientation.LEFT_RIGHT;
+        };
+        gradient.setOrientation(orientation);
+        gradient.setColors(colors);
+        gradient.setStroke(strokeWidth, strokeColor);
+        if (cornerRadii != null) {
+            gradient.setCornerRadii(cornerRadii);
+        } else {
+            gradient.setCornerRadius(0);
+        }
+
+        return new LayerDrawable(new Drawable[]{gradient});
+    }
+
 }

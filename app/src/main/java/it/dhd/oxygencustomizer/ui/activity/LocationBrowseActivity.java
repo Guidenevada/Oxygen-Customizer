@@ -37,6 +37,12 @@ import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.OplusRecyclerView;
+import androidx.recyclerview.widget.RecyclerView;
+
 import com.google.android.material.appbar.MaterialToolbar;
 
 import org.json.JSONArray;
@@ -45,21 +51,16 @@ import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.WindowCompat;
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
-
+import it.dhd.oneplusui.appcompat.app.OplusActivity;
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.ui.drawables.TintedDrawableSpan;
 import it.dhd.oxygencustomizer.utils.NetworkUtils;
 
-public class LocationBrowseActivity extends AppCompatActivity {
+public class LocationBrowseActivity extends OplusActivity {
     private static final String TAG = "LocationBrowseActivity";
 
     public static final String DATA_LOCATION_NAME = "location_name";
@@ -67,10 +68,11 @@ public class LocationBrowseActivity extends AppCompatActivity {
     public static final String DATA_LOCATION_LON = "location_lon";
 
     private List<LocationBrowseItem> mLocationBrowseList = new ArrayList<>();
-    private LocagtionListAdapter mAdapter;
+    private LocationListAdapter mAdapter;
     private ExecutorService mExecutorService = Executors.newSingleThreadExecutor();
     private Handler mHandler = new Handler();
     private String mQueryString;
+    private String response;
 
     private Runnable mQueryRunnable = new Runnable() {
         @Override
@@ -84,11 +86,11 @@ public class LocationBrowseActivity extends AppCompatActivity {
 
 
     private static class LocationBrowseItem {
-        private String mCityExt;
-        private String mCountryId;
-        private String mCity;
-        private double mLat;
-        private double mLon;
+        private final String mCityExt;
+        private final String mCountryId;
+        private final String mCity;
+        private final double mLat;
+        private final double mLon;
 
         public LocationBrowseItem(String cityExt, String countryId, String city, double lat, double lon) {
             mCityExt = cityExt;
@@ -124,7 +126,7 @@ public class LocationBrowseActivity extends AppCompatActivity {
         }
     }
 
-    public class LocagtionListAdapter extends RecyclerView.Adapter<LocagtionListAdapter.ViewHolder> {
+    public class LocationListAdapter extends RecyclerView.Adapter<LocationListAdapter.ViewHolder> {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -166,8 +168,6 @@ public class LocationBrowseActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        //WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
-
         setContentView(R.layout.location_browse_activity);
 
         MaterialToolbar toolbar = findViewById(R.id.toolbar);
@@ -201,8 +201,9 @@ public class LocationBrowseActivity extends AppCompatActivity {
             }
         });
 
-        mAdapter = new LocagtionListAdapter();
+        mAdapter = new LocationListAdapter();
         RecyclerView queryList = findViewById(R.id.query_result);
+        queryList.addItemDecoration(new OplusRecyclerView.OplusRecyclerViewItemDecoration(this));
         queryList.setAdapter(mAdapter);
         queryList.setLayoutManager(new LinearLayoutManager(this));
     }
@@ -225,7 +226,7 @@ public class LocationBrowseActivity extends AppCompatActivity {
         try {
             String lang = Locale.getDefault().getLanguage().replaceFirst("_", "-");
             String url = String.format(URL_PLACES, Uri.encode(input.trim()), lang);
-            String response = NetworkUtils.downloadUrlMemoryAsString(url);
+            getResponse(url);
             if (response != null) {
                 JSONArray jsonResults = new JSONObject(response).getJSONArray("geonames");
                 int count = jsonResults.length();
@@ -264,6 +265,30 @@ public class LocationBrowseActivity extends AppCompatActivity {
                 mAdapter.notifyDataSetChanged();
             });
         }
+    }
+
+    private void getResponse(String url) {
+        response = "";
+        CountDownLatch latch = new CountDownLatch(1);
+
+        NetworkUtils.asynchronousGetRequest(url, null, result -> {
+            if (!TextUtils.isEmpty(result)) {
+                Log.d(TAG, "Download success " + result);
+                response = result;
+            } else {
+                response = "";
+                Log.d(TAG, "Download failed");
+            }
+            latch.countDown();
+        });
+
+        try {
+            latch.await(); // Wait until the response is set
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore interrupt status
+            Log.e(TAG, "retrieve interrupted", e);
+        }
+
     }
 
     private void showProgress() {

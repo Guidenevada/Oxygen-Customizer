@@ -2,11 +2,11 @@ package it.dhd.oxygencustomizer.xposed.hooks.systemui;
 
 import static de.robv.android.xposed.XposedBridge.hookAllConstructors;
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getBooleanField;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_AMBIENT;
+import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_CENTER_MIRRORED;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_COLOR_MODE;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_COLOR_USER;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_CUSTOM_DIMEN;
@@ -14,7 +14,11 @@ import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_CUSTOM_DI
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_EMPTY_BLOCK_SIZE;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_FILLED_BLOCK_SIZE;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_FUDGE_FACTOR;
+import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_GRAVITY;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_LAVA_SPEED;
+import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_LINE_SHOW_FLASH;
+import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_LINE_WAVE_OPACITY;
+import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_LINE_WAVE_STROKE;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_LOCKSCREEN;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_NAVBAR;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_PREFS;
@@ -24,11 +28,10 @@ import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_SOLID_FUD
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_SOLID_UNITS_COUNT;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_SOLID_UNITS_OPACITY;
 import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_SOLID_UNITS_ROUNDED;
+import static it.dhd.oxygencustomizer.utils.Constants.SoundPrefs.PULSE_VERTICAL_MIRROR;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
 
 import android.content.Context;
-import android.os.Handler;
-import android.os.Looper;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
@@ -40,12 +43,12 @@ import it.dhd.oxygencustomizer.xposed.XposedMods;
 import it.dhd.oxygencustomizer.xposed.views.VisualizerView;
 import it.dhd.oxygencustomizer.xposed.views.pulse.ColorController;
 import it.dhd.oxygencustomizer.xposed.views.pulse.FadingBlockRenderer;
+import it.dhd.oxygencustomizer.xposed.views.pulse.LineRenderer;
 import it.dhd.oxygencustomizer.xposed.views.pulse.PulseControllerImpl;
 import it.dhd.oxygencustomizer.xposed.views.pulse.SolidLineRenderer;
 
 public class PulseViewHook extends XposedMods {
 
-    private static final String TAG = "PulseViewHook ";
     private static final String listenPackage = Constants.Packages.SYSTEM_UI;
     private static Class<?> CentralSurfacesImpl = null;
     private FrameLayout mNotificationShadeView = null;
@@ -58,6 +61,12 @@ public class PulseViewHook extends XposedMods {
     private View mStartButton = null, mEndButton = null;
     private FrameLayout mAodRootLayout = null;
     private FrameLayout mNavigationBar = null;
+    private boolean mCenterMirrored = false, mVerticalMirror = false;
+    private int mGravity = 0;
+    private boolean mShowFlash = true;
+    private int mWaveOpacity = 200;
+    private float mWaveStroke = 5f;
+    private boolean DWallpaperEnabled = false;
 
 
     public PulseViewHook(Context context) {
@@ -74,7 +83,7 @@ public class PulseViewHook extends XposedMods {
         mAmbientPulse = Xprefs.getBoolean(PULSE_AMBIENT, false);
 
         // Render Mode
-        mPulseStyle = Integer.parseInt(Xprefs.getString(PULSE_RENDER_STYLE, "1"));
+        mPulseStyle = Integer.parseInt(Xprefs.getString(PULSE_RENDER_STYLE, "0"));
 
         // Pulse Smoothing
         mPulseSmoothing = Xprefs.getBoolean(PULSE_SMOOTHING, false);
@@ -99,10 +108,22 @@ public class PulseViewHook extends XposedMods {
         mPulseSolidCount = Xprefs.getSliderInt(PULSE_SOLID_UNITS_COUNT, 32);
         mPulseSolidFudgeFactor = Xprefs.getSliderInt(PULSE_SOLID_FUDGE_FACTOR, 4);
 
+        // Pulse Mirror and Gravity
+        mCenterMirrored = Xprefs.getBoolean(PULSE_CENTER_MIRRORED, false);
+        mVerticalMirror = Xprefs.getBoolean(PULSE_VERTICAL_MIRROR, false);
+        mGravity = Integer.parseInt(Xprefs.getString(PULSE_GRAVITY, "0"));
+
+        // Line Renderer
+        mShowFlash = Xprefs.getBoolean(PULSE_LINE_SHOW_FLASH, true);
+        mWaveStroke = Xprefs.getSliderFloat(PULSE_LINE_WAVE_STROKE, 5f);
+        mWaveOpacity = Xprefs.getSliderInt(PULSE_LINE_WAVE_OPACITY, 200);
+
         mPulseEnabled = mNavBarPulse || mLockScreenPulse || mAmbientPulse;
 
+        DWallpaperEnabled = Xprefs.getBoolean("DWallpaperEnabled", false);
+
         if (Key.length > 0) {
-            for(String PulsePref : PULSE_PREFS) {
+            for (String PulsePref : PULSE_PREFS) {
                 if (Key[0].equals(PulsePref)) {
                     if (PulseControllerImpl.hasInstance()) {
                         refreshPulse(PulseControllerImpl.getInstance());
@@ -123,20 +144,6 @@ public class PulseViewHook extends XposedMods {
         CentralSurfacesImpl = findClass("com.android.systemui.statusbar.phone.CentralSurfacesImpl", lpparam.classLoader);
 
         Class<?> NavigationBarView = findClass("com.android.systemui.navigationbar.NavigationBarView", lpparam.classLoader);
-        /*hookAllMethods(NavigationBarView, "onFinishInflate", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                mNavigationBar = (FrameLayout) param.thisObject;
-
-            }
-        });
-        hookAllMethods(CentralSurfacesImpl, "makeStatusBarView", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                mNotificationShadeView = (FrameLayout) callMethod(param.thisObject, "getNotificationShadeWindowView"); //callMethod(param.thisObject, "getNotificationShadeWindowView");//getObjectField(param.thisObject, "mNotificationShadeWindowView");
-                //mNotificationShadeView.addView(new VisualizerView(mContext));
-            }
-        });*/
 
         Class<?> NotificationShadeWindowView;
         try {
@@ -186,7 +193,7 @@ public class PulseViewHook extends XposedMods {
                     mStartButton = mKeyguardBottomArea.findViewById(mContext.getResources().getIdentifier("start_button", "id", Constants.Packages.SYSTEM_UI));
                     mEndButton = mKeyguardBottomArea.findViewById(mContext.getResources().getIdentifier("end_button", "id", Constants.Packages.SYSTEM_UI));
                 } catch (Throwable t) {
-                    log(TAG + "Failed to find start/end button");
+                    log("Failed to find start/end button");
                 }
                 updateLockscreenIcons();
             }
@@ -196,7 +203,7 @@ public class PulseViewHook extends XposedMods {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 if (PulseControllerImpl.hasInstance()) {
-                    ///log(TAG + "keyguardGoingAway");
+                    ///log("keyguardGoingAway");
                     PulseControllerImpl.getInstance().notifyKeyguardGoingAway();
                 }
             }
@@ -206,7 +213,7 @@ public class PulseViewHook extends XposedMods {
         hookAllMethods(CentralSurfacesImpl, "updateDozingState", new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                //log(TAG + "updateDozingState, dozing: " + getBooleanField(param.thisObject, "mDozing"));
+                //log("updateDozingState, dozing: " + getBooleanField(param.thisObject, "mDozing"));
                 if (PulseControllerImpl.hasInstance()) {
                     PulseControllerImpl.getInstance().setDozing(getBooleanField(param.thisObject, "mDozing"));
                 }
@@ -219,9 +226,11 @@ public class PulseViewHook extends XposedMods {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                 if (PulseControllerImpl.hasInstance()) {
-                    //log(TAG + "Keyguard is showing: " + param.args[0]);
+                    //log("Keyguard is showing: " + param.args[0]);
                     PulseControllerImpl.getInstance().setKeyguardShowing((boolean) param.args[0]);
-                    if (mLockScreenPulse) new Handler(Looper.getMainLooper()).postDelayed(() -> updateLockscreenIcons(), 200);
+                    VisualizerView.getInstance().bringToFront();
+                    VisualizerView.getInstance().requestLayout();
+                    updateLockscreenIcons();
                 }
             }
         });
@@ -232,12 +241,13 @@ public class PulseViewHook extends XposedMods {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) throws Throwable {
                     if (PulseControllerImpl.hasInstance()) {
-                        //log(TAG + "Screen pinning: " + (boolean)param.args[0]);
+                        //log("Screen pinning: " + (boolean)param.args[0]);
                         PulseControllerImpl.getInstance().setScreenPinning((boolean) param.args[0]);
                     }
                 }
             });
-        } catch (Throwable ignored){}
+        } catch (Throwable ignored) {
+        }
 
     }
 
@@ -252,8 +262,10 @@ public class PulseViewHook extends XposedMods {
             mEndButton.bringToFront();
             mEndButton.requestLayout();
         }
+        mKeyguardBottomArea.bringToFront();
         mKeyguardBottomArea.requestLayout();
     }
+
     private void onPrimaryMetadataOrStateChanged(int state) {
         if (mPulseEnabled && PulseControllerImpl.hasInstance()) {
             PulseControllerImpl.getInstance().onPrimaryMetadataOrStateChanged(state);
@@ -266,7 +278,7 @@ public class PulseViewHook extends XposedMods {
     }
 
     private void placePulseView() {
-        log(TAG + "Placing PulseView");
+        log("Placing PulseView");
         VisualizerView visualizerView;
         if (VisualizerView.hasInstance()) {
             visualizerView = VisualizerView.getInstance();
@@ -293,25 +305,37 @@ public class PulseViewHook extends XposedMods {
         if (SolidLineRenderer.hasInstance()) {
             refreshPulseSolidLineRenderer(SolidLineRenderer.getInstance());
         }
-        if (ColorController.hasInstance()) {
-            refreshPulseColorController(ColorController.getInstance());
-        }
         if (FadingBlockRenderer.hasInstance()) {
             refreshPulseFadingBlockRenderer(FadingBlockRenderer.getInstance());
+        }
+        if (LineRenderer.hasInstance()) {
+            refreshPulseLineRenderer(LineRenderer.getInstance());
+        }
+
+        if (ColorController.hasInstance()) {
+            refreshPulseColorController(ColorController.getInstance());
         }
     }
 
     private void refreshPulseSolidLineRenderer(SolidLineRenderer solidLineRenderer) {
         if (solidLineRenderer == null) return;
 
-        solidLineRenderer.updateSettings(mPulseSolidFudgeFactor, mPulseSmoothing, mPulseSolidRounded, mPulseSolidCount, mPulseSolidOpacity);
+        solidLineRenderer.updateSettings(mPulseSolidFudgeFactor, mPulseSmoothing, mPulseSolidRounded, mPulseSolidCount, mPulseSolidOpacity,
+                mCenterMirrored, mVerticalMirror, mGravity);
     }
 
     private void refreshPulseFadingBlockRenderer(FadingBlockRenderer fadingBlockRenderer) {
         if (fadingBlockRenderer == null) return;
 
-        fadingBlockRenderer.updateSettings(mPulseEmptyBlock, mPulseCustomDimen, mPulseDiv, mPulseFudgeFactor, mPulseFilledBlock);
+        fadingBlockRenderer.updateSettings(mPulseEmptyBlock, mPulseCustomDimen, mPulseDiv, mPulseFudgeFactor, mPulseFilledBlock,
+                mCenterMirrored, mVerticalMirror, mGravity);
         fadingBlockRenderer.updateSmoothingEnabled(mPulseSmoothing);
+    }
+
+    private void refreshPulseLineRenderer(LineRenderer lineRenderer) {
+        if (lineRenderer == null) return;
+
+        lineRenderer.updateSettings(mShowFlash, mWaveStroke, mWaveOpacity);
     }
 
     private void refreshPulseColorController(ColorController colorController) {

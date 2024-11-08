@@ -1,6 +1,28 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
 
+    <attr name="preferenceBackgroundColor" format="reference|color" />
+    <attr name="preferenceBackgroundColorPressed" format="reference|color" />
+
+    <declare-styleable name="OplusPreference">
+        <attr name="clickStyle" format="integer"/>
+        <attr name="forcePosition" format="string"/>
+        <attr name="tintTitle" format="boolean"/>
+        <attr name="centerTitle" format="boolean"/>
+    </declare-styleable>
+
+    <declare-styleable name="OplusSwitchPreference">
+        <attr name="forcePosition" />
+    </declare-styleable>
+
+    <declare-styleable name="OplusEditTextPreference">
+        <attr name="forcePosition" />
+    </declare-styleable>
+
+    <declare-styleable name="OplusListPreference">
+        <attr name="forcePosition" />
+    </declare-styleable>
+
     <declare-styleable name="SliderPreference">
         <attr name="valueCount" format="integer"/>
         <attr name="updatesContinuously" format="boolean"/>
@@ -10,6 +32,10 @@
         <attr name="showResetButton" format="float"/>
         <attr name="showValueLabel" format="boolean"/>
         <attr name="units" format="string"/>
+        <attr name="isDecimalFormat" format="boolean" />
+        <attr name="decimalFormat" format="string" />
+        <attr name="valueFormat" format="string" />
+        <attr name="outputScale" format="float" />
     </declare-styleable>
 
     <declare-styleable name="footerPreferenceStyle">
@@ -23,11 +49,12 @@
         <attr name="sliderValue" format="integer" />
         <attr name="sliderValueFrom" format="integer" />
         <attr name="sliderValueTo" format="integer" />
-        <attr name="valueFormat" format="string" />
+        <attr name="valueFormat" />
+        <attr name="forcePosition" />
         <attr name="sliderDefaultValue" format="integer" />
-        <attr name="isDecimalFormat" format="boolean" />
-        <attr name="decimalFormat" format="string" />
-        <attr name="outputScale" format="float" />
+        <attr name="isDecimalFormat" />
+        <attr name="decimalFormat" />
+        <attr name="outputScale" />
         <attr name="hasResetButton" format="boolean" />
     </declare-styleable>
 
@@ -40,13 +67,28 @@
         <attr name="summaryText" />
         <attr name="icon" />
         <attr name="iconSpaceReserved" />
+        <attr name="forcePosition" />
+        <attr name="drawBackground" format="boolean" />
+        <attr name="iconWidth" format="dimension" />
+        <attr name="iconHeight" format="dimension" />
         <attr name="isChecked" format="boolean" />
     </declare-styleable>
 
     <declare-styleable name="ColorPickerWidget">
         <attr name="titleText" />
         <attr name="summaryText" />
+        <attr name="forcePosition" />
         <attr name="previewColor" format="reference" />
+    </declare-styleable>
+
+    <declare-styleable name="ListWidget">
+        <attr name="titleText" />
+        <attr name="summaryText" />
+        <attr name="icon" />
+        <attr name="iconSpaceReserved" />
+        <attr name="forcePosition" />
+        <attr name="entries" format="reference"/>
+        <attr name="entryValues" format="reference"/>
     </declare-styleable>
 
     <declare-styleable name="SearchPreference">

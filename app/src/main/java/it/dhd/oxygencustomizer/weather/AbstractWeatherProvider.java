@@ -33,6 +33,8 @@ import java.text.SimpleDateFormat;
 import java.util.Calendar;
 import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.utils.NetworkUtils;
@@ -48,16 +50,40 @@ public abstract class AbstractWeatherProvider {
             "https://secure.geonames.org/extendedFindNearbyJSON?lat=%f&lng=%f&lang=%s&username=omnijaws";
     public static final String PART_COORDINATES =
             "lat=%f&lon=%f";
+    private static String response = "";
 
     public AbstractWeatherProvider(Context context) {
         mContext = context;
     }
 
-    protected String retrieve(String url) {
-        return NetworkUtils.downloadUrlMemoryAsString(url);
+    protected String retrieve(String url, String[] header) {
+        response = "";
+        CountDownLatch latch = new CountDownLatch(1);
+
+        NetworkUtils.asynchronousGetRequest(url, header, result -> {
+            if (!TextUtils.isEmpty(result)) {
+                Log.d(TAG, "Download success " + result);
+                response = result;
+            } else {
+                response = "";
+                Log.e(TAG, "Download " + url + " failed");
+            }
+            latch.countDown();
+        });
+
+        try {
+            if (!latch.await(10, TimeUnit.SECONDS)) {
+                Log.d(TAG, "Timeout while waiting for network response");
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt(); // Restore interrupt status
+            Log.e(TAG, "retrieve interrupted", e);
+        }
+
+        return response;
     }
 
-    public abstract WeatherInfo getCustomWeather(String id, boolean metric);
+    public abstract WeatherInfo getCustomWeather(String lat, String lon, boolean metric);
 
     public abstract WeatherInfo getLocationWeather(Location location, boolean metric);
 
@@ -68,17 +94,18 @@ public abstract class AbstractWeatherProvider {
     }
 
     private String getCoordinatesLocalityWithGoogle(String coordinate) {
-        double latitude = Double.valueOf(coordinate.substring(4, coordinate.indexOf("&")));
-        double longitude = Double.valueOf(coordinate.substring(coordinate.indexOf("lon=") + 4));
+        double latitude = Double.valueOf(coordinate.substring(coordinate.indexOf("=") + 1, coordinate.indexOf("&")));
+        double longitude = Double.valueOf(coordinate.substring(coordinate.lastIndexOf("=") + 1));
+
         Geocoder geocoder = new Geocoder(mContext.getApplicationContext(), Locale.getDefault());
         try {
             List<Address> listAddresses = geocoder.getFromLocation(latitude, longitude, 1);
-            if(listAddresses != null && listAddresses.size() > 0){
+            if (listAddresses != null && !listAddresses.isEmpty()) {
                 Address a = listAddresses.get(0);
                 return TextUtils.isEmpty(a.getLocality()) ? a.getAdminArea() : a.getLocality();
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            log(TAG, e.getMessage());
         }
         return null;
     }
@@ -88,13 +115,12 @@ public abstract class AbstractWeatherProvider {
         if (!TextUtils.isEmpty(cityGoogle)) {
             return cityGoogle;
         }
-        double latitude = Double.valueOf(coordinate.substring(4, coordinate.indexOf("&")));
-        double longitude = Double.valueOf(coordinate.substring(coordinate.indexOf("lon=") + 4));
-        Log.d(TAG, "getCoordinatesLocality " + latitude + " " + longitude);
+        double latitude = Double.valueOf(coordinate.substring(coordinate.indexOf("=") + 1, coordinate.indexOf("&")));
+        double longitude = Double.valueOf(coordinate.substring(coordinate.lastIndexOf("=") + 1));
 
         String lang = Locale.getDefault().getLanguage().replaceFirst("_", "-");
         String url = String.format(URL_LOCALITY, latitude, longitude, lang);
-        String response = retrieve(url);
+        String response = retrieve(url, null);
         if (response == null) {
             return null;
         }
@@ -142,8 +168,8 @@ public abstract class AbstractWeatherProvider {
 
     protected String getWeatherDataLocality(String coordinates) {
         String city;
-        if (Config.isCustomLocation(mContext)) {
-            city = Config.getLocationName(mContext);
+        if (WeatherConfig.isCustomLocation(mContext)) {
+            city = WeatherConfig.getLocationName(mContext);
             if (TextUtils.isEmpty(city)) {
                 city = getCoordinatesLocality(coordinates);
             }
@@ -151,7 +177,7 @@ public abstract class AbstractWeatherProvider {
             city = getCoordinatesLocality(coordinates);
         }
         if (TextUtils.isEmpty(city)) {
-            city = mContext.getResources().getString(R.string.omnijaws_city_unkown);
+            city = mContext.getResources().getString(R.string.omnijaws_city_unknown);
         }
         log(TAG, "getWeatherDataLocality = " + city);
         return city;

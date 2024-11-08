@@ -2,7 +2,6 @@ package it.dhd.oxygencustomizer.xposed.hooks.systemui;
 
 import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
-import static de.robv.android.xposed.XposedHelpers.getStaticIntField;
 
 import android.content.Context;
 import android.content.res.ColorStateList;
@@ -16,9 +15,11 @@ import it.dhd.oxygencustomizer.xposed.XposedMods;
 public class SettingsLibUtilsProvider extends XposedMods {
     private static final String listenPackage = Constants.Packages.SYSTEM_UI;
     private static Class<?> UtilsClass = null;
-    private static Class<?> AbsSettingsValueProxy = null;
-    private static Class<?> BrightnessUtils = null;
     private static Class<?> CoUIColors = null;
+
+    public SettingsLibUtilsProvider(Context context) {
+        super(context);
+    }
 
     public static ColorStateList getColorAttr(int resID, Context context) {
         if (UtilsClass == null) return null;
@@ -32,6 +33,12 @@ public class SettingsLibUtilsProvider extends XposedMods {
         return (int) callStaticMethod(UtilsClass, "getColorStateListDefaultColor", context, resID);
     }
 
+    public static int getColorErrorDefaultColor(Context context) {
+        if (CoUIColors == null) return 0;
+
+        return (int) callStaticMethod(CoUIColors, "getColorErrorDefaultColor", context);
+    }
+
     public static int getColorAttrDefaultColor(Context context, int resID) {
         if (UtilsClass == null) return 0;
 
@@ -39,6 +46,21 @@ public class SettingsLibUtilsProvider extends XposedMods {
             return (int) callStaticMethod(UtilsClass, "getColorAttrDefaultColor", context, resID, 0);
         } catch (Throwable ignored) { //OOS 13
             return (int) callStaticMethod(UtilsClass, "getColorAttrDefaultColor", context, resID);
+        }
+    }
+
+    public static int getColorAttrDefaultColor(int resID, Context context, int defValue) {
+        if (UtilsClass == null) {
+            return defValue;
+        }
+        try {
+            return (int) callStaticMethod(UtilsClass, "getColorAttrDefaultColor", context, resID, defValue);
+        } catch (Throwable throwable) {
+            try {
+                return (int) callStaticMethod(UtilsClass, "getColorAttrDefaultColor", context, resID);
+            } catch (Throwable throwable1) {
+                return (int) callStaticMethod(UtilsClass, "getColorAttrDefaultColor", resID, context);
+            }
         }
     }
 
@@ -56,24 +78,6 @@ public class SettingsLibUtilsProvider extends XposedMods {
         }
     }
 
-    public static int getSecureIntValue(Context context, String str, int i) {
-        if (AbsSettingsValueProxy == null) return i;
-
-        return (int) callStaticMethod(AbsSettingsValueProxy, "getSecureIntValue", context, str, i);
-    }
-
-    public static float convertGammaToLinearFloat(int i, float f, float f2) {
-        if (BrightnessUtils == null) return 0f;
-
-        return (float) callStaticMethod(BrightnessUtils, "convertGammaToLinearFloat", i, f, f2);
-    }
-
-    public static int getGammaMax() {
-        if (BrightnessUtils == null) return 0;
-
-        return getStaticIntField(BrightnessUtils, "GAMMA_SPACE_MAX");
-    }
-
     public static int getThemeAttr(Context context, int attr) {
         return getThemeAttr(context, attr, 0);
     }
@@ -84,10 +88,6 @@ public class SettingsLibUtilsProvider extends XposedMods {
         int theme = ta.getResourceId(0, defaultValue);
         ta.recycle();
         return theme;
-    }
-
-    public SettingsLibUtilsProvider(Context context) {
-        super(context);
     }
 
     @Override
@@ -102,8 +102,6 @@ public class SettingsLibUtilsProvider extends XposedMods {
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
         UtilsClass = findClass("com.android.settingslib.Utils", lpparam.classLoader);
-        AbsSettingsValueProxy = findClass("com.oplusos.systemui.common.settingsvalue.AbsSettingsValueProxy", lpparam.classLoader);
-        BrightnessUtils = findClass("com.android.settingslib.display.BrightnessUtils", lpparam.classLoader);
         CoUIColors = findClass("com.coui.appcompat.contextutil.COUIContextUtil", lpparam.classLoader);
     }
 }

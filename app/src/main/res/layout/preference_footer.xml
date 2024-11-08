@@ -15,8 +15,10 @@
   -->
 
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
+    android:layout_marginHorizontal="@dimen/preference_card_margin_horizontal"
     android:background="?android:attr/selectableItemBackground"
     android:clipToPadding="false"
     android:minHeight="?android:attr/listPreferredItemHeight"
@@ -37,7 +39,9 @@
         <ImageView
             android:id="@android:id/icon"
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content" />
+            android:layout_height="wrap_content"
+            android:importantForAccessibility="no"
+            app:tint="@color/text_color_primary" />
     </LinearLayout>
 
     <LinearLayout
@@ -52,9 +56,9 @@
             android:ellipsize="marquee"
             android:paddingTop="16dp"
             android:paddingBottom="8dp"
-            android:textColor="?android:attr/textColorSecondary" />
+            android:textColor="@color/text_color_primary" />
 
-        <it.dhd.oxygencustomizer.customprefs.LinkTextView
+        <it.dhd.oxygencustomizer.ui.preferences.LinkTextView
             android:id="@+id/settingslib_learn_more"
             style="@style/TextAppearance.Footer.Title.SettingsLib"
             android:layout_width="wrap_content"

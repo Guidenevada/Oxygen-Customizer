@@ -1,33 +1,33 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-    xmlns:android="http://schemas.android.com/apk/res/android"
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:search="http://schemas.android.com/apk/it.dhd.oxygencustomizer.customprefs.preferencesearch">
+    xmlns:search="http://schemas.android.com/apk/it.dhd.oxygencustomizer.ui.preferences.preferencesearch">
 
-    <SwitchPreferenceCompat
+    <it.dhd.oneplusui.preference.OplusSwitchPreference
         android:defaultValue="false"
         android:key="quick_settings_tiles_customize"
-        android:title="@string/quick_settings_tiles_main"
-        android:summaryOn="@string/general_on"
         android:summaryOff="@string/general_off"
+        android:summaryOn="@string/general_on"
+        android:title="@string/quick_settings_tiles_main"
         app:iconSpaceReserved="false" />
 
-    <it.dhd.oxygencustomizer.customprefs.SliderPreference
+    <it.dhd.oneplusui.preference.OplusSliderPreference
         android:key="quick_settings_quick_tiles"
         android:title="@string/quick_settings_tiles_qqs"
         app:defaultValue="5"
+        app:forcePosition="bottom"
         app:iconSpaceReserved="false"
         app:maxVal="6"
         app:minVal="1"
         app:tickInterval="1" />
 
-    <PreferenceCategory
-        android:title="@string/quick_settings_tiles_portrait"
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
         android:key="qs_tile_potrait"
-        search:ignore="true"
-        app:iconSpaceReserved="false">
+        android:title="@string/quick_settings_tiles_portrait"
+        app:iconSpaceReserved="false"
+        search:ignore="true">
 
-        <it.dhd.oxygencustomizer.customprefs.SliderPreference
+        <it.dhd.oneplusui.preference.OplusSliderPreference
             android:key="quick_settings_tiles_rows"
             android:title="@string/quick_settings_tiles_horizontal_rows"
             app:defaultValue="3"
@@ -35,7 +35,7 @@
             app:maxVal="6"
             app:minVal="1" />
 
-        <it.dhd.oxygencustomizer.customprefs.SliderPreference
+        <it.dhd.oneplusui.preference.OplusSliderPreference
             android:key="quick_settings_tiles_horizontal_columns"
             android:title="@string/quick_settings_tiles_horizontal_columns"
             app:defaultValue="4"
@@ -44,15 +44,15 @@
             app:minVal="1"
             app:tickInterval="1" />
 
-    </PreferenceCategory>
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
 
-    <PreferenceCategory
-        android:title="@string/quick_settings_tiles_landscape"
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
         android:key="qs_tile_landscape"
-        search:ignore="true"
-        app:iconSpaceReserved="false">
+        android:title="@string/quick_settings_tiles_landscape"
+        app:iconSpaceReserved="false"
+        search:ignore="true">
 
-        <it.dhd.oxygencustomizer.customprefs.SliderPreference
+        <it.dhd.oneplusui.preference.OplusSliderPreference
             android:key="quick_settings_tiles_vertical_columns"
             android:title="@string/quick_settings_tiles_vertical_columns"
             app:defaultValue="4"
@@ -61,9 +61,9 @@
             app:minVal="1"
             app:tickInterval="1" />
 
-    </PreferenceCategory>
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
 
-    <!-- <SwitchPreferenceCompat
+    <!-- <it.dhd.oneplusui.preference.OplusSwitchPreference
         android:defaultValue="false"
         android:key="quick_settings_disable_lockscreen"
         android:title="@string/quick_settings_tiles_disable_qs_title"

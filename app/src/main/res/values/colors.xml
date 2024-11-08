@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <!-- UI -->
+    <color name="colorAccent">@android:color/system_accent1_300</color>
+    <color name="colorAccentVariant">@android:color/system_accent3_600</color>
     <color name="seed">#00897B</color>
     <color name="md_theme_light_primary">#006B5F</color>
     <color name="md_theme_light_onPrimary">#FFFFFF</color>
@@ -64,15 +67,26 @@
 
     <color name="settingslib_protection_color">?backgroundColor</color>
 
+    <!-- Preferences -->
+    <color name="preference_category_text">#6F7071 </color>
+    <color name="preference_background_color_pressed">#e6e6e6</color>
+    <color name="list_color_pressed">#000000</color>
+    <color name="list_selector_color_pressed">#0f000000</color>
+
     <color name="error">#DA000E</color>
     <color name="success">#008753</color>
-    <color name="trasp">#00000000</color>
+    <color name="transparent">#00000000</color>
 
     <color name="option_border_default">#5f6368</color>
     <color name="rippleDark">#66000000</color>
     <color name="dialer_divider_line_color">#5C5C5C</color>
+    <color name="holo_blue_light">@color/holo_blue_light_dark</color>
+    <color name="holo_blue_dark">@color/holo_blue_dark_dark</color>
 
-    <color name="textColorPrimary">@android:color/system_neutral1_900</color>
+    <!-- Text -->
+    <color name="textColorPrimary">#191919</color>
+    <color name="textColorPrimaryDisabled">#4d000000</color>
+    <color name="textColorSecondary">#757575</color>
 
     <drawable name="notification_number_text_color">#ff000000</drawable>
 
@@ -82,6 +96,58 @@
     <color name="white">#FFFFFF</color>
     <color name="black">#000000</color>
 
+    <!-- Launcher Icon -->
     <color name="ic_launcher_background">#2F3B49</color>
+    <color name="ic_launcher_foreground_themed">@android:color/system_neutral2_700</color>
+    <color name="ic_launcher_background_themed">@android:color/system_accent1_100</color>
+
+    <color name="colorBackground">#F3F4F6</color>
+    <color name="colorBackgroundSoft">@color/colorBackground</color>
+    <color name="colorBackgroundMedium">@color/colorBackground</color>
+    <color name="colorBackgroundHard">@color/colorBackground</color>
+    <color name="colorPressBackground">#14000000</color>
+    <color name="cardview_background">@color/cardview_light_background</color>
+
+    <!-- Splash screen -->
+    <color name="splash_logo">@color/colorAccent</color>
+
+    <color name="colorAppbarOverlay">@color/color_appbar_overlay_light</color>
+    <color name="colorNavbarOverlay">@color/color_navbar_overlay_light</color>
+
+    <!-- Previews -->
+    <color name="holo_blue_light_light">@android:color/system_accent1_300</color>
+    <color name="holo_blue_light_dark">@android:color/system_accent1_600</color>
+    <color name="holo_blue_dark_light">@android:color/system_accent3_300</color>
+    <color name="holo_blue_dark_dark">@android:color/system_accent3_600</color>
+    <color name="offStateColor">@android:color/system_neutral2_10</color>
+    <color name="offStateColor2">#1A000000</color>
+    <color name="offStateColor3">#40000000</color>
+    <color name="offStateColor4">#66FFFFFF</color>
+    <color name="shadow">#14000000</color>
+    <color name="neumorph_outline_start">#FFBDBDBD</color>
+    <color name="neumorph_outline_end">#FFF0F0F0</color>
+    <color name="color_background_alpha">@color/color_background_alpha_light</color>
+
+    <color name="rippleAccent">@color/color_accent_alpha_light</color>
+
+    <color name="settings_pui_monet_v1">@android:color/system_accent1_600</color>
+    <color name="settings_pui_monet_v2">@android:color/system_accent1_700</color>
+    <color name="settings_accent">@android:color/system_accent1_500</color>
+
+    <color name="lockscreen_widget_background_color_dark">@android:color/system_neutral1_900</color>
+    <color name="lockscreen_widget_background_color_light">@android:color/system_neutral1_0</color>
+    <color name="lockscreen_widget_active_color_dark">@android:color/system_accent1_100</color>
+    <color name="lockscreen_widget_active_color_light">@android:color/system_accent1_600</color>
+    <color name="card_surface_color">@android:color/system_neutral1_100</color>
+
+    <color name="oplusColorSurfaces">#F3F4F6</color>
+    <color name="bottomNavigationBackground">#FAFAFA</color>
+
+    <!-- Radio Button -->
+    <color name="btn_radio_background_color">#4d000000</color>
+    <color name="btn_radio_color_on_disabled">#ffffff</color>
+
+    <color name="wallpaper_preview_scrim_color">#99000000</color>
+
 
 </resources>

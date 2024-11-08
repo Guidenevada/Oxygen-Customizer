@@ -25,9 +25,9 @@ package it.dhd.oxygencustomizer.xposed.views;
  *
  */
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
 
@@ -35,9 +35,11 @@ import androidx.annotation.NonNull;
 
 import it.dhd.oxygencustomizer.xposed.views.pulse.PulseControllerImpl;
 
+@SuppressLint("ViewConstructor")
 public class PulseView extends View {
     public static final String TAG = "PulseView";
 
+    @SuppressLint("StaticFieldLeak")
     private static PulseControllerImpl mPulse;
 
     public PulseView(Context context, PulseControllerImpl controller) {

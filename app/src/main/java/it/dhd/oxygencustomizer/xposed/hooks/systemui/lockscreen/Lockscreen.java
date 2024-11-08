@@ -1,9 +1,7 @@
 package it.dhd.oxygencustomizer.xposed.hooks.systemui.lockscreen;
 
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
-import static de.robv.android.xposed.XposedHelpers.callStaticMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
@@ -11,8 +9,6 @@ import static de.robv.android.xposed.XposedHelpers.setObjectField;
 import static it.dhd.oxygencustomizer.utils.Constants.Packages.SYSTEM_UI;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_CARRIER_REPLACEMENT;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_CUSTOM_FINGERPRINT;
-import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_CUSTOM_LEFT_AFFORDANCE;
-import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_CUSTOM_RIGHT_AFFORDANCE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_FINGERPRINT_SCALING;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_FINGERPRINT_STYLE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOCKSCREEN_HIDE_CAPSULE;
@@ -26,49 +22,47 @@ import static it.dhd.oxygencustomizer.utils.Constants.Preferences.Lockscreen.LOC
 import static it.dhd.oxygencustomizer.xposed.ResourceManager.resparams;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
 import static it.dhd.oxygencustomizer.xposed.utils.DrawableConverter.scaleDrawable;
+import static it.dhd.oxygencustomizer.xposed.utils.ReflectionTools.findClassInArray;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Color;
 import android.graphics.ImageDecoder;
 import android.graphics.drawable.AnimatedImageDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Environment;
+import android.text.TextUtils;
 import android.view.View;
-import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import androidx.annotation.NonNull;
 import androidx.core.content.res.ResourcesCompat;
-import androidx.databinding.adapters.ViewBindingAdapter;
 
 import java.io.File;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.atomic.AtomicReference;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.callbacks.XC_InitPackageResources;
 import de.robv.android.xposed.callbacks.XC_LayoutInflated;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import it.dhd.oxygencustomizer.BuildConfig;
-import it.dhd.oxygencustomizer.utils.Constants;
+import it.dhd.oxygencustomizer.utils.StringFormatter;
 import it.dhd.oxygencustomizer.xposed.ResourceManager;
 import it.dhd.oxygencustomizer.xposed.XposedMods;
 
 public class Lockscreen extends XposedMods {
 
     private final static String listenPackage = SYSTEM_UI;
+    final StringFormatter carrierStringFormatter = new StringFormatter();
     private final String TAG = "Oxygen Customizer - Lockscreen: ";
-    private Class<?> KeyguardHelper = null;
-    private Object OSF = null;
+    private final Class<?> KeyguardHelper = null;
     private boolean removeSOS;
     private boolean hideFingerprint = false, customFingerprint = false;
     private int fingerprintStyle = 0;
-    private Object mFpIcon;
     private float mFpScale = 1.0f;
     private Drawable mFpDrawable = null;
     private boolean removeLeftAffordance = false, removeRightAffordance = false;
@@ -76,8 +70,8 @@ public class Lockscreen extends XposedMods {
     private View mStartButton = null, mEndButton = null;
     private ImageView mLockIcon = null;
     private boolean hideLockscreenCarrier = false, hideLockscreenStatusbar = false, hideLockscreenCapsule = false;
+    private TextView mCarrierText = null;
     private String lockscreenCarrierReplacement = "";
-    private static Object carrierTextController;
 
     public Lockscreen(Context context) {
         super(context);
@@ -112,16 +106,12 @@ public class Lockscreen extends XposedMods {
             ) {
                 hideLockscreenStuff();
             }
+            if (Key[0].equals(LOCKSCREEN_REMOVE_LOCK)) {
+                if (mLockIcon != null)
+                    mLockIcon.setVisibility(removeLockIcon ? View.GONE : View.VISIBLE);
+            }
         }
 
-    }
-
-    private boolean isMethodSecure() {
-        log(TAG + "isMethodSecure" + " != null" + (KeyguardHelper != null));
-        if (KeyguardHelper != null) {
-            return (boolean) callStaticMethod(KeyguardHelper, "hasSecurityKeyguard");
-        }
-        return false;
     }
 
     @Override
@@ -129,9 +119,23 @@ public class Lockscreen extends XposedMods {
         if (!lpparam.packageName.equals(listenPackage)) return;
 
         try {
+            ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
+            executor.scheduleWithFixedDelay(() -> {
+                File Android = new File(Environment.getExternalStorageDirectory() + "/Android");
+
+                if (Android.isDirectory()) {
+                    updateDrawable();
+                    executor.shutdown();
+                    executor.shutdownNow();
+                }
+            }, 0, 5, TimeUnit.SECONDS);
+        } catch (Throwable ignored) {
+        }
+
+        try {
             hideLockscreenStuff();
         } catch (Throwable t) {
-            log(TAG + "hideLockscreenStuff failed " + t.getMessage());
+            log(t);
         }
 
         try {
@@ -143,21 +147,14 @@ public class Lockscreen extends XposedMods {
                 }
             });
         } catch (Throwable t) {
-            log(TAG + "OplusEmergencyButtonExImpl not found");
+            log(t);
         }
 
-        Class<?> OnScreenFingerprint;
-        try {
-            OnScreenFingerprint = findClass("com.oplus.systemui.biometrics.finger.udfps.OnScreenFingerprintUiMach", lpparam.classLoader);
-        } catch (Throwable t) {
-            OnScreenFingerprint = findClass("com.oplus.systemui.keyguard.finger.onscreenfingerprint.OnScreenFingerprintUiMech", lpparam.classLoader);
-        }
-        hookAllMethods(OnScreenFingerprint, "initFpIconWin", new XC_MethodHook() {
-            @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                OSF = param.thisObject;
-            }
-        });
+        Class<?> OnScreenFingerprint = findClassInArray(lpparam,
+                "com.oplus.systemui.biometrics.finger.udfps.OnScreenFingerprintUiMech", /* OOS15 */
+                "com.oplus.systemui.biometrics.finger.udfps.OnScreenFingerprintUiMach", /* OOS14 */
+                "com.oplus.systemui.keyguard.finger.onscreenfingerprint.OnScreenFingerprintUiMech" /* OOS13 */);
+
         try {
             hookAllMethods(OnScreenFingerprint, "loadAnimDrawables", new XC_MethodHook() {
                 @Override
@@ -166,7 +163,7 @@ public class Lockscreen extends XposedMods {
                 }
             });
         } catch (Throwable t) {
-            log(TAG + "loadAnimDrawables not found");
+            log(t);
         }
 
         try {
@@ -177,31 +174,36 @@ public class Lockscreen extends XposedMods {
                 }
             });
         } catch (Throwable t) {
-            log(TAG + "startFadeInAnimation not found");
+            log(t);
         }
 
-        try {
-            hookAllMethods(OnScreenFingerprint, "updateFpIconColor", new XC_MethodHook() {
-                @Override
-                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                    if (!customFingerprint || hideFingerprint) return;
-                    Drawable d = (Drawable) getObjectField(param.thisObject, "mImMobileDrawable");
-                    if (d != null) d.clearColorFilter();
-                }
-            });
-        } catch (Throwable t) {
-            log(TAG + "updateFpIconColor not found");
+        if (Build.VERSION.SDK_INT == 33) {
+            try {
+                hookAllMethods(OnScreenFingerprint, "updateFpIconColor", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        if (!customFingerprint || hideFingerprint) return;
+                        Drawable d = (Drawable) getObjectField(param.thisObject, "mImMobileDrawable");
+                        if (d != null) d.clearColorFilter();
+                    }
+                });
+            } catch (Throwable t) {
+                log(t);
+            }
         }
 
-        try {
-            hookAllMethods(OnScreenFingerprint, "startFadeOutAnimation", new XC_MethodHook() {
-                @Override
-                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                    if (hideFingerprint || customFingerprint) param.setResult(null);
-                }
-            });
-        } catch (Throwable t) {
-            log(TAG + "startFadeInAnimation not found");
+        if (Build.VERSION.SDK_INT >= 34) {
+            try {
+                findAndHookMethod(OnScreenFingerprint, "updateFpColor", int.class, new XC_MethodHook() {
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        if (!customFingerprint || hideFingerprint) return;
+                        param.args[0] = Color.TRANSPARENT;
+                    }
+                });
+            } catch (Throwable t) {
+                log(t);
+            }
         }
 
         // Affordance Section
@@ -211,14 +213,18 @@ public class Lockscreen extends XposedMods {
         hookLockIcon(lpparam);
 
         // Custom Carrier
-        hookCarrier(lpparam);
+        try {
+            hookCarrier(lpparam);
+        } catch (Throwable t) {
+            log(t);
+        }
 
     }
 
     private void updateFingerprintIcon(XC_MethodHook.MethodHookParam param, boolean isStartMethod) {
-        if (mFpIcon == null) mFpIcon = getObjectField(param.thisObject, "mFpIcon");
+        Object mFpIcon = getObjectField(param.thisObject, "mFpIcon");
 
-        if (BuildConfig.DEBUG) log(TAG + "updateFingerprintIcon");
+        log("updateFingerprintIcon");
 
         if (mFpDrawable == null) {
             setObjectField(param.thisObject, "mFadeInAnimDrawable", null);
@@ -228,23 +234,23 @@ public class Lockscreen extends XposedMods {
         if (mFpIcon != null) {
             callMethod(mFpIcon, "setImageDrawable", mFpDrawable == null ? null : mFpDrawable);
         }
-        if (hideFingerprint && isStartMethod) {
+        if (isStartMethod) {
             param.setResult(null);
         }
-        //if (!isStartMethod) callMethod(param.thisObject, "updateFpIconColor");
+        if (!isStartMethod) callMethod(param.thisObject, "updateFpIconColor");
     }
 
     private void updateDrawable() {
         if (customFingerprint) {
             if (fingerprintStyle != -1) {
-                @SuppressLint("DiscouragedApi") int resId = ResourceManager.modRes.getIdentifier("fingerprint_" + fingerprintStyle,"drawable", BuildConfig.APPLICATION_ID);
+                @SuppressLint("DiscouragedApi") int resId = ResourceManager.modRes.getIdentifier("fingerprint_" + fingerprintStyle, "drawable", BuildConfig.APPLICATION_ID);
                 mFpDrawable = (ResourcesCompat.getDrawable(ResourceManager.modRes,
                         resId,
                         mContext.getTheme()));
             } else {
                 try {
                     ScheduledExecutorService executor = Executors.newSingleThreadScheduledExecutor();
-                    executor.scheduleAtFixedRate(() -> {
+                    executor.scheduleWithFixedDelay(() -> {
                         File Android = new File(Environment.getExternalStorageDirectory() + "/Android");
 
                         if (Android.isDirectory()) {
@@ -255,7 +261,9 @@ public class Lockscreen extends XposedMods {
                                     ((AnimatedImageDrawable) mFpDrawable).setRepeatCount(AnimatedImageDrawable.REPEAT_INFINITE);
                                     ((AnimatedImageDrawable) mFpDrawable).start();
                                 }
-                            } catch (Throwable ignored) {}
+                            } catch (Throwable t) {
+                                log("Failed to load custom fingerprint icon: " + t.getMessage());
+                            }
                         }
                     }, 0, 5, TimeUnit.SECONDS);
                 } catch (Throwable ignored) {
@@ -270,13 +278,15 @@ public class Lockscreen extends XposedMods {
 
     private void updateAffordance() {
         if (removeLeftAffordance || removeRightAffordance) {
-            if (mStartButton != null) mStartButton.setVisibility(removeLeftAffordance ? View.GONE : View.VISIBLE);
-            if (mEndButton != null) mEndButton.setVisibility(removeRightAffordance ? View.GONE : View.VISIBLE);
+            if (mStartButton != null)
+                mStartButton.setVisibility(removeLeftAffordance ? View.GONE : View.VISIBLE);
+            if (mEndButton != null)
+                mEndButton.setVisibility(removeRightAffordance ? View.GONE : View.VISIBLE);
         }
     }
 
     private void hookAffordance(XC_LoadPackage.LoadPackageParam lpparam) {
-        if (Build.VERSION.SDK_INT == 34) {
+        if (Build.VERSION.SDK_INT >= 34) {
             Class<?> KeyguardBottomAreaView = findClass("com.android.systemui.keyguard.ui.binder.KeyguardBottomAreaViewBinder", lpparam.classLoader);
             hookAllMethods(KeyguardBottomAreaView, "updateButton", new XC_MethodHook() {
                 @Override
@@ -319,24 +329,44 @@ public class Lockscreen extends XposedMods {
     }
 
     private void hookLockIcon(XC_LoadPackage.LoadPackageParam lpparam) {
-
+        try {
+            Class<?> LockIconView = findClass("com.android.keyguard.LockIconView", lpparam.classLoader);
+            hookAllMethods(LockIconView, "onFinishInflate", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    mLockIcon = (ImageView) getObjectField(param.thisObject, "mLockIcon");
+                    if (removeLockIcon) {
+                        mLockIcon.setVisibility(View.GONE);
+                    }
+                }
+            });
+        } catch (Throwable t) {
+            log("LockIconViewController not found");
+        }
     }
 
     private void hookCarrier(XC_LoadPackage.LoadPackageParam lpparam) {
+
+        carrierStringFormatter.registerCallback(this::setCarrierText);
 
         Class<?> OplusStatCarrierTextController = findClass("com.oplus.systemui.statusbar.widget.OplusStatCarrierTextController", lpparam.classLoader);
         hookAllMethods(OplusStatCarrierTextController, "updateCarrierInfo", new XC_MethodHook() {
             @Override
             protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
                 TextView mView = (TextView) getObjectField(param.thisObject, "mView");
-                if (mView.getId() == mContext.getResources().getIdentifier("keyguard_carrier_text", "id", listenPackage) &&
-                        !lockscreenCarrierReplacement.isEmpty()
-                ) {
-                    mView.post(() -> mView.setText(lockscreenCarrierReplacement));
-                    param.setResult(null);
+                if (mView.getId() == mContext.getResources().getIdentifier("keyguard_carrier_text", "id", listenPackage)) {
+                    mCarrierText = mView;
+                    setCarrierText();
+                    if (!TextUtils.isEmpty(lockscreenCarrierReplacement)) param.setResult(null);
                 }
             }
         });
+    }
+
+    private void setCarrierText() {
+        if (mCarrierText != null && !TextUtils.isEmpty(lockscreenCarrierReplacement)) {
+            mCarrierText.post(() -> mCarrierText.setText(carrierStringFormatter.formatString(lockscreenCarrierReplacement)));
+        }
     }
 
     private void hideLockscreenStuff() {
@@ -392,7 +422,8 @@ public class Lockscreen extends XposedMods {
                     }
                 }
             });
-        } catch (Throwable ignored) {
+        } catch (Throwable t) {
+            log(t);
         }
     }
 

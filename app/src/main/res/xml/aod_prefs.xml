@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+
+    <it.dhd.oxygencustomizer.ui.preferences.IllustrationPreference
+        android:key="sb_illustration"
+        app:lottie_rawRes="@raw/aod_illustration" />
+
+    <it.dhd.oneplusui.preference.OplusJumpPreference
+        android:fragment="it.dhd.oxygencustomizer.ui.fragments.mods.aod.AodClock"
+        android:key="aod_clock"
+        android:title="@string/aod_clock"
+        app:forcePosition="top"
+        app:iconSpaceReserved="false" />
+
+    <it.dhd.oneplusui.preference.OplusJumpPreference
+        android:fragment="it.dhd.oxygencustomizer.ui.fragments.mods.aod.AodWeather"
+        android:key="aod_weather"
+        android:title="@string/aod_weather"
+        app:iconSpaceReserved="false" />
+
+</PreferenceScreen>

@@ -1,15 +1,14 @@
 package it.dhd.oxygencustomizer.ui.fragments;
 
 import static androidx.preference.PreferenceManager.getDefaultSharedPreferences;
+import static it.dhd.oxygencustomizer.utils.AppUtils.restartApplication;
 import static it.dhd.oxygencustomizer.utils.Constants.Packages.SYSTEM_UI;
 
 import android.app.Activity;
-import android.content.Context;
+import android.content.ComponentName;
 import android.content.Intent;
 import android.content.SharedPreferences;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
@@ -19,35 +18,66 @@ import android.util.Log;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.Nullable;
+import androidx.preference.ListPreference;
 import androidx.preference.Preference;
-import androidx.preference.PreferenceFragmentCompat;
-import androidx.preference.SwitchPreferenceCompat;
 
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import it.dhd.oneplusui.preference.OplusJumpPreference;
+import it.dhd.oneplusui.preference.OplusSwitchPreference;
 import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.ui.activity.MainActivity;
+import it.dhd.oxygencustomizer.ui.base.ControlledPreferenceFragmentCompat;
 import it.dhd.oxygencustomizer.utils.AppUtils;
 import it.dhd.oxygencustomizer.utils.PrefManager;
-import it.dhd.oxygencustomizer.utils.PreferenceHelper;
 import it.dhd.oxygencustomizer.utils.UpdateScheduler;
-import it.dhd.oxygencustomizer.utils.UpdateWorker;
 
-public class Settings extends PreferenceFragmentCompat {
+public class Settings extends ControlledPreferenceFragmentCompat {
 
-    private static final int REQUEST_IMPORT = 98;
-    private static final int REQUEST_EXPORT = 99;
+    // Language Pref
+    private ListPreference languagePref;
 
-    Preference ghPref, deleteAllPref, importPref, exportPref, creditsPref;
+    private Preference ghPref, deleteAllPref, importPref, exportPref, creditsPref, supportGroupPref, translatePref;
+    private OplusSwitchPreference appIconThemed;
 
     // Updater Prefs
-    Preference updatePref;
-    SwitchPreferenceCompat autoUpdatePref, checkOnWifiPref;
+    private OplusJumpPreference updatePref;
+    private OplusSwitchPreference autoUpdatePref;
+
     boolean export = true;
+
+    @Override
+    public String getTitle() {
+        return getString(R.string.settings_title);
+    }
+
+    @Override
+    public boolean backButtonEnabled() {
+        return true;
+    }
+
+    @Override
+    public int getLayoutResource() {
+        return R.xml.own_settings;
+    }
+
+    @Override
+    public boolean hasMenu() {
+        return false;
+    }
+
+    @Override
+    public String[] getScopes() {
+        return new String[0];
+    }
 
     @Override
     public void onCreatePreferences(@Nullable Bundle savedInstanceState, @Nullable String rootKey) {
         setPreferencesFromResource(R.xml.own_settings, rootKey);
 
+        appIconThemed = findPreference("themed_icon");
+        languagePref = findPreference("appLanguage");
         ghPref = findPreference("GitHubRepo");
         deleteAllPref = findPreference("deleteAllPrefs");
         exportPref = findPreference("export");
@@ -55,7 +85,28 @@ public class Settings extends PreferenceFragmentCompat {
         creditsPref = findPreference("credits");
         updatePref = findPreference("updates");
         autoUpdatePref = findPreference("autoUpdate");
-        checkOnWifiPref = findPreference("checkOnWifi");
+        supportGroupPref = findPreference("SupportGroup");
+        translatePref = findPreference("translate");
+
+        if (appIconThemed != null) {
+            appIconThemed.setOnPreferenceChangeListener((preference, newValue) -> {
+                boolean isThemed = (boolean) newValue;
+                new MaterialAlertDialogBuilder(requireActivity())
+                        .setTitle(R.string.app_kill_alert_title)
+                        .setMessage(R.string.app_kill_alert_body)
+                        .setPositiveButton(R.string.app_kill_ok_btn, (dialog, which) -> changeIcon(isThemed))
+                        .setCancelable(false)
+                        .show();
+                return true;
+            });
+        }
+
+        if (languagePref != null) {
+            languagePref.setOnPreferenceChangeListener((preference, newValue) -> {
+                restartApplication(requireActivity());
+                return true;
+            });
+        }
 
         if (ghPref != null) {
             ghPref.setOnPreferenceClickListener(preference -> {
@@ -99,11 +150,8 @@ public class Settings extends PreferenceFragmentCompat {
         }
 
         if (updatePref != null) {
-            updatePref.setSummary(
-                    String.format(
-                            getString(R.string.check_updates_summary),
-                            BuildConfig.VERSION_NAME
-                    )
+            updatePref.setJumpText(
+                    BuildConfig.VERSION_NAME
             );
             updatePref.setOnPreferenceClickListener(preference -> {
                 MainActivity.replaceFragment(new UpdateFragment());
@@ -118,6 +166,41 @@ public class Settings extends PreferenceFragmentCompat {
             });
         }
 
+        if (supportGroupPref != null) {
+            supportGroupPref.setOnPreferenceClickListener(preference -> {
+                // Open Telegram Group
+                requireActivity().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://t.me/OxygenCustomizer")));
+                return true;
+            });
+        }
+
+        if (translatePref != null) {
+            translatePref.setOnPreferenceClickListener(preference -> {
+                // Open Crowdin
+                requireActivity().startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse("https://crowdin.com/project/oxygen-customizer")));
+                return true;
+            });
+        }
+
+    }
+
+    private void changeIcon(boolean isThemed) {
+        PackageManager packageManager = getActivity().getPackageManager();
+
+        packageManager.setComponentEnabledSetting(
+                new ComponentName(BuildConfig.APPLICATION_ID, BuildConfig.APPLICATION_ID + ".SplashActivity"),
+                isThemed ? PackageManager.COMPONENT_ENABLED_STATE_DISABLED : PackageManager.COMPONENT_ENABLED_STATE_ENABLED,
+                PackageManager.DONT_KILL_APP
+        );
+
+        // Enable themed app icon component
+        packageManager.setComponentEnabledSetting(
+                new ComponentName(BuildConfig.APPLICATION_ID, BuildConfig.APPLICATION_ID + ".SplashActivityThemed"),
+                isThemed ? PackageManager.COMPONENT_ENABLED_STATE_ENABLED : PackageManager.COMPONENT_ENABLED_STATE_DISABLED,
+                PackageManager.DONT_KILL_APP
+        );
+
+        getActivity().finish();
     }
 
     private void importExportSettings(boolean export) {
@@ -163,10 +246,5 @@ public class Settings extends PreferenceFragmentCompat {
                     }
                 }
             });
-
-    @Override
-    public void setDivider(Drawable divider) {
-        super.setDivider(new ColorDrawable(Color.TRANSPARENT));
-    }
 
 }

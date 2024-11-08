@@ -1,14 +1,25 @@
 package it.dhd.oxygencustomizer.utils;
 
+import static it.dhd.oxygencustomizer.utils.Constants.Weather.WEATHER_CUSTOM_LOCATION;
+import static it.dhd.oxygencustomizer.utils.Constants.Weather.WEATHER_ICON_PACK;
+import static it.dhd.oxygencustomizer.utils.Constants.Weather.WEATHER_OWM_KEY;
+import static it.dhd.oxygencustomizer.utils.Constants.Weather.WEATHER_PROVIDER;
+import static it.dhd.oxygencustomizer.utils.Constants.Weather.WEATHER_UNITS;
+import static it.dhd.oxygencustomizer.utils.Constants.Weather.WEATHER_UPDATE_INTERVAL;
+
 import android.os.Environment;
 
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.xposed.utils.BootLoopProtector;
 
-public class Constants {
+public final class Constants {
+
+    public static final int DEFAULT_DARK_MODE_STYLE = 0;
 
     public static class Packages {
         public static final String FRAMEWORK = "android";
@@ -21,12 +32,8 @@ public class Constants {
     public static class Preferences {
         public static class General {
             public static final List<String> PREF_UPDATE_EXCLUSIONS = Arrays.asList(BootLoopProtector.LOAD_TIME_KEY_KEY, BootLoopProtector.PACKAGE_STRIKE_KEY_KEY);
-        }
-        public static class Framework {
-            public static final String SENSOR_BLOCK = "sensor_block";
-            public static final String SENSOR_BLOCK_APP_LIST = "sensor_block_app_list";
-            public static final String SENSOR_BLOCKED_APP = "sensor_blocked_app";
-            public static final String SENSOR_BLOCK_APP_DUMMY = "sensor_blocked_app_dummy";
+            public static final String PREF_MORE_LOGGING = "moreLogging";
+            public static final String APP_LANGUAGE = "appLanguage";
         }
         public static class BatteryPrefs {
             public static final String CUSTOMIZE_BATTERY_ICON = "battery_icon_customize";
@@ -122,6 +129,7 @@ public class Constants {
             public static final int BATTERY_STYLE_LANDSCAPE_BATTERYO = 34;
             public static final int BATTERY_STYLE_CIRCLE = 35;
             public static final int BATTERY_STYLE_DOTTED_CIRCLE = 36;
+            public static final int BATTERY_STYLE_FILLED_CIRCLE = 37;
 
         }
         public static class QsHeaderImage {
@@ -168,17 +176,25 @@ public class Constants {
                     QS_HEADER_IMAGE_ZOOM_TO_FIT
             };
         }
+        public static class QuickSettings {
+            public static final String QS_TRANSPARENCY_SWITCH = "qs_transparency_switch";
+            public static final String QS_TRANSPARENCY_VAL = "qs_transparency_value";
+            public static final String QSPANEL_BLUR_SWITCH = "qs_transparency_blur_switch";
+            public static final String BLUR_RADIUS_VALUE = "qs_transparency_blur_radius";
+        }
         public static class QsTiles {
             public static final String QS_CUSTOMIZE_TILES = "quick_settings_tiles_customize";
             public static final String QS_QUICK_TILES = "quick_settings_quick_tiles";
             public static final String QS_ROWS = "quick_settings_tiles_rows";
             public static final String QS_COLUMNS = "quick_settings_tiles_horizontal_columns";
+            public static final String QS_COLUMNS_LANDSCAPE = "quick_settings_tiles_vertical_columns";
 
             public static final String[] QS_TILES_PREFS = {
                     QS_CUSTOMIZE_TILES,
                     QS_QUICK_TILES,
                     QS_ROWS,
-                    QS_COLUMNS
+                    QS_COLUMNS,
+                    QS_COLUMNS_LANDSCAPE
             };
         }
         public static class QsTilesCustomization {
@@ -188,6 +204,11 @@ public class Constants {
             public static final String QS_TILE_INACTIVE_COLOR = "qs_tile_inactive_color";
             public static final String QS_TILE_DISABLED_COLOR_ENABLED = "qs_tile_disabled_color_enabled";
             public static final String QS_TILE_DISABLED_COLOR = "qs_tile_disabled_color";
+            public static final String QS_MEDIA_SHOW_ALBUM_ART = "qs_media_show_album_art";
+            public static final String QS_MEDIA_ART_FILTER = "qs_media_art_filter";
+            public static final String QS_MEDIA_ART_BLUR_AMOUNT = "qs_media_blur_amount";
+            public static final String QS_MEDIA_ART_TINT_COLOR = "qs_media_art_tint_color";
+            public static final String QS_MEDIA_ART_TINT_AMOUNT = "qs_media_art_tint_amount";
             public static final String QS_TILE_HIDE_LABELS = "qs_hide_labels";
             public static final String QS_TILE_LABELS_CUSTOM_COLOR_ENABLED = "qs_tile_label_enabled";
             public static final String QS_TILE_LABELS_CUSTOM_COLOR = "qs_tile_label";
@@ -196,6 +217,23 @@ public class Constants {
             public static final String QS_BRIGHTNESS_SLIDER_COLOR = "brightness_slider_color";
             public static final String QS_BRIGHTNESS_SLIDER_BACKGROUND_ENABLED = "brightness_slider_background_color_enabled";
             public static final String QS_BRIGHTNESS_SLIDER_BACKGROUND_COLOR = "brightness_slider_background_color";
+            public static final String QS_TILE_ANIMATION_STYLE = "qs_tile_animation_style";
+            public static final String QS_TILE_ANIMATION_INTERPOLATOR = "qs_tile_animation_interpolator";
+            public static final String QS_TILE_ANIMATION_DURATION = "qs_tile_animation_duration";
+            public static final String QS_TILE_ANIMATION_TRANSFORMATIONS_SWITCH = "qs_transitions_title_switch";
+            public static final String QS_TILE_ANIMATION_TRANSFORMATIONS = "qs_tile_transformations";
+
+            // Qs Radius
+            public static final String QS_TILE_HIGHTLIGHT_RADIUS = "qs_tile_highlight_custom_radius_enabled";
+            public static final String QS_TILE_HIGHTLIGHT_RADIUS_TOP_LEFT = "qs_tile_highlight_custom_radius_top_left";
+            public static final String QS_TILE_HIGHTLIGHT_RADIUS_TOP_RIGHT = "qs_tile_highlight_custom_radius_top_right";
+            public static final String QS_TILE_HIGHTLIGHT_RADIUS_BOTTOM_LEFT = "qs_tile_highlight_custom_radius_bottom_left";
+            public static final String QS_TILE_HIGHTLIGHT_RADIUS_BOTTOM_RIGHT = "qs_tile_highlight_custom_radius_bottom_right";
+            public static final String QS_TILE_RADIUS = "qs_tile_custom_radius_enabled";
+            public static final String QS_TILE_RADIUS_TOP_LEFT = "qs_tile_custom_radius_top_left";
+            public static final String QS_TILE_RADIUS_TOP_RIGHT = "qs_tile_custom_radius_top_right";
+            public static final String QS_TILE_RADIUS_BOTTOM_LEFT = "qs_tile_custom_radius_bottom_left";
+            public static final String QS_TILE_RADIUS_BOTTOM_RIGHT = "qs_tile_custom_radius_bottom_right";
 
             public static final String[] QS_UPDATE_PREFS = {
                     QS_TILE_ACTIVE_COLOR_ENABLED,
@@ -204,15 +242,52 @@ public class Constants {
                     QS_TILE_INACTIVE_COLOR,
                     QS_TILE_DISABLED_COLOR_ENABLED,
                     QS_TILE_DISABLED_COLOR,
+                    QS_TILE_LABELS_CUSTOM_COLOR,
+                    QS_TILE_LABELS_CUSTOM_COLOR_ENABLED,
+                    QS_TILE_HIDE_LABELS,
                     QS_BRIGHTNESS_SLIDER_CUSTOMIZE,
                     QS_BRIGHTNESS_SLIDER_COLOR_MODE,
                     QS_BRIGHTNESS_SLIDER_COLOR,
                     QS_BRIGHTNESS_SLIDER_BACKGROUND_ENABLED,
-                    QS_BRIGHTNESS_SLIDER_BACKGROUND_COLOR
+                    QS_BRIGHTNESS_SLIDER_BACKGROUND_COLOR,
+                    QS_TILE_HIGHTLIGHT_RADIUS,
+                    QS_TILE_HIGHTLIGHT_RADIUS_TOP_LEFT,
+                    QS_TILE_HIGHTLIGHT_RADIUS_TOP_RIGHT,
+                    QS_TILE_HIGHTLIGHT_RADIUS_BOTTOM_LEFT,
+                    QS_TILE_HIGHTLIGHT_RADIUS_BOTTOM_RIGHT,
+                    QS_TILE_RADIUS,
+                    QS_TILE_RADIUS_TOP_LEFT,
+                    QS_TILE_RADIUS_TOP_RIGHT,
+                    QS_TILE_RADIUS_BOTTOM_LEFT,
+                    QS_TILE_RADIUS_BOTTOM_RIGHT
             };
 
         }
+        public static class QsWidgetsPrefs {
+            public static final String QS_WIDGETS_SWITCH = "qs_widgets_switch";
+            public static final String QS_WIDGETS_LIST = "qs_widgets_widgets";
+            public static final String QS_PHOTO_RADIUS = "qs_widgets_photo_radius";
+        }
+        public static class QsHeaderSystemIcons {
 
+            public static final String QS_SYSTEM_ICON_CHIP_SWITCH = "qs_header_system_icons_chip_switch";
+            public static final String QS_SYSTEM_ICON_CHIP = "qs_header_system_icons_chip";
+
+            public static final String[] QS_HEADER_SYSTEM_ICON_CHIP = {
+                    QS_SYSTEM_ICON_CHIP_SWITCH,
+                    getStyle(QS_SYSTEM_ICON_CHIP),
+                    getUseGradient(QS_SYSTEM_ICON_CHIP),
+                    getGradientNum(QS_SYSTEM_ICON_CHIP, 1),
+                    getGradientNum(QS_SYSTEM_ICON_CHIP, 2),
+                    getGradientOrientation(QS_SYSTEM_ICON_CHIP),
+                    getStrokeWidth(QS_SYSTEM_ICON_CHIP),
+                    getRoundedCorners(QS_SYSTEM_ICON_CHIP),
+                    getTopSxR(QS_SYSTEM_ICON_CHIP),
+                    getTopDxR(QS_SYSTEM_ICON_CHIP),
+                    getBottomSxR(QS_SYSTEM_ICON_CHIP),
+                    getBottomDxR(QS_SYSTEM_ICON_CHIP)
+            };
+        }
         public static class QsHeaderClock {
             // Custom Switch
             public static final String QS_HEADER_CLOCK_CUSTOM_ENABLED = "qs_header_clock_custom_enabled";
@@ -241,7 +316,7 @@ public class Constants {
             // Custom Clock Prefs
             public static final String QS_HEADER_CLOCK_TEXT_SCALING = "qs_header_clock_text_scaling";
             public static final String QS_HEADER_CLOCK_CUSTOM_COLOR_SWITCH = "qs_header_clock_custom_color_switch";
-            public static final String QS_HEADER_CLOCK_CUSTOM_COLOR = "qs_header_clock_custom_color";
+            public static final String QS_HEADER_CLOCK_CUSTOM_USER_IMAGE = "qs_header_clock_custom_user_image";
             public static final String QS_HEADER_CLOCK_TOP_MARGIN = "qs_header_clock_top_margin";
             public static final String QS_HEADER_CLOCK_LEFT_MARGIN = "qs_header_clock_left_margin";
             public static final String QS_HEADER_CLOCK_COLOR_CODE_ACCENT1 = "qs_header_clock_color_code_accent1";
@@ -249,44 +324,7 @@ public class Constants {
             public static final String QS_HEADER_CLOCK_COLOR_CODE_ACCENT3 = "qs_header_clock_color_code_accent3";
             public static final String QS_HEADER_CLOCK_COLOR_CODE_TEXT1 = "qs_header_clock_color_code_text1";
             public static final String QS_HEADER_CLOCK_COLOR_CODE_TEXT2 = "qs_header_clock_color_code_text2";
-
-            public static String getStyle(String key) {
-                return key + "_STYLE";
-            }
-
-            public static String getUseAccentColor(String key) {
-                return key + "_USE_ACCENT_COLOR";
-            }
-            public static String getUseGradient(String key) {
-                return key + "_USE_GRADIENT";
-            }
-            public static String getGradientNum(String key, int num) {
-                return key + "_GRADIENT_" + num;
-            }
-            public static String getGradientOrientation(String key) {
-                return key + "_GRADIENT_ORIENTATION";
-            }
-            public static String getStrokeWidth(String key) {
-                return key + "_STROKE_WIDTH";
-            }
-            public static String getStrokeColor(String key) {
-                return key + "_STROKE_COLOR";
-            }
-            public static String getRoundedCorners(String key) {
-                return key + "_ROUNDED_CORNERS";
-            }
-            public static String getTopSxR(String key) {
-                return key + "_TOP_LEFT_RADIUS";
-            }
-            public static String getTopDxR(String key) {
-                return key + "_TOP_RIGHT_RADIUS";
-            }
-            public static String getBottomSxR(String key) {
-                return key + "_BOTTOM_LEFT_RADIUS";
-            }
-            public static String getBottomDxR(String key) {
-                return key + "_BOTTOM_RIGHT_RADIUS";
-            }
+            public static final String QS_HEADER_CLOCK_CUSTOM_FORMAT = "qs_clock_custom_format";
 
             public static final String[] QS_HEADER_PREFS = {
                     QS_HEADER_CLOCK_STOCK_RED_MODE,
@@ -301,6 +339,7 @@ public class Constants {
                     QS_HEADER_CLOCK_CUSTOM_VALUE,
                     QS_HEADER_CLOCK_TEXT_SCALING,
                     QS_HEADER_CLOCK_CUSTOM_COLOR_SWITCH,
+                    QS_HEADER_CLOCK_CUSTOM_USER_IMAGE,
                     QS_HEADER_CLOCK_COLOR_CODE_ACCENT1,
                     QS_HEADER_CLOCK_COLOR_CODE_ACCENT2,
                     QS_HEADER_CLOCK_COLOR_CODE_ACCENT3,
@@ -319,6 +358,8 @@ public class Constants {
                     getGradientNum(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP, 1),
                     getGradientNum(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP, 2),
                     getGradientOrientation(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP),
+                    getStrokeColor(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP),
+                    getUseAccentColorStroke(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP),
                     getStrokeWidth(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP),
                     getRoundedCorners(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP),
                     getTopSxR(QS_HEADER_CLOCK_STOCK_CLOCK_BACKGROUND_CHIP),
@@ -335,6 +376,8 @@ public class Constants {
                     getGradientNum(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP, 2),
                     getGradientOrientation(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
                     getStrokeWidth(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
+                    getStrokeColor(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
+                    getUseAccentColorStroke(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
                     getRoundedCorners(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
                     getTopSxR(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
                     getTopDxR(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP),
@@ -342,14 +385,12 @@ public class Constants {
                     getBottomDxR(QS_HEADER_CLOCK_STOCK_DATE_BACKGROUND_CHIP)
             };
         }
-
         public static class Buttons {
             public static final String BUTTONS_POWER_LONGPRESS_TORCH = "torch_long_press_power_gesture";
             public static final String BUTTONS_POWER_LONGPRESS_TORCH_TIMEOUT_SWITCH = "torch_long_press_power_gesture_enable_timeout";
             public static final String BUTTONS_POWER_LONGPRESS_TORCH_TIMEOUT = "torch_long_press_power_timeout";
             public static final String BUTTONS_VOLUME_MUSIC = "volbtn_music_controls";
         }
-
         public static class Lockscreen {
             public static final String DISABLE_POWER = "disable_power_on_lockscreen";
             public static final String LOCKSCREEN_REMOVE_SOS = "hide_sos_lockscreen";
@@ -360,14 +401,11 @@ public class Constants {
             public static final String LOCKSCREEN_REMOVE_LOCK = "lockscreen_hide_lock_icon";
             public static final String LOCKSCREEN_REMOVE_LEFT_AFFORDANCE = "lockscreen_affordance_remove_left";
             public static final String LOCKSCREEN_REMOVE_RIGHT_AFFORDANCE = "lockscreen_affordance_remove_right";
-            public static final String LOCKSCREEN_CUSTOM_LEFT_AFFORDANCE = "lockscreen_affordance_custom_left";
-            public static final String LOCKSCREEN_CUSTOM_RIGHT_AFFORDANCE = "lockscreen_affordance_custom_left";
             public static final String LOCKSCREEN_HIDE_CARRIER = "lockscreen_hide_carrier";
             public static final String LOCKSCREEN_HIDE_STATUSBAR = "lockscreen_hide_statusbar";
             public static final String LOCKSCREEN_HIDE_CAPSULE = "lockscreen_hide_capsule";
             public static final String LOCKSCREEN_CARRIER_REPLACEMENT = "lockscreen_carrier_replacement";
         }
-
         public static class LockscreenClock {
             public static final String LOCKSCREEN_CLOCK_SWITCH = "lockscreen_custom_clock_switch";
             public static final String LOCKSCREEN_CLOCK_STYLE = "lockscreen_custom_clock_style";
@@ -385,9 +423,11 @@ public class Constants {
             public static final String LOCKSCREEN_CLOCK_COLOR_CODE_ACCENT3 = "lockscreen_clock_color_code_accent3";
             public static final String LOCKSCREEN_CLOCK_COLOR_CODE_TEXT1 = "lockscreen_clock_color_code_text1";
             public static final String LOCKSCREEN_CLOCK_COLOR_CODE_TEXT2 = "lockscreen_clock_color_code_text2";
-            public static final String LOCKSCREEN_CLOCK_CUSTOM_USER = "lockscreen_clock_custom_user_switch";
             public static final String LOCKSCREEN_CLOCK_CUSTOM_USER_VALUE = "lockscreen_clock_custom_user";
+            public static final String LOCKSCREEN_CLOCK_CUSTOM_DEVICE_VALUE = "lockscreen_clock_custom_device";
             public static final String LOCKSCREEN_CLOCK_CUSTOM_USER_IMAGE = "lockscreen_clock_custom_user_image";
+            public static final String LOCKSCREEN_CLOCK_CUSTOM_IMAGE = "lockscreen_clock_custom_image_switch";
+            public static final String LOCKSCREEN_CLOCK_DATE_FORMAT = "lockscreen_clock_custom_format";
 
             public static final String[] LOCKSCREEN_CLOCK_PREFS = {
                     LOCKSCREEN_CLOCK_SWITCH,
@@ -405,42 +445,147 @@ public class Constants {
                     LOCKSCREEN_CLOCK_COLOR_CODE_ACCENT2,
                     LOCKSCREEN_CLOCK_COLOR_CODE_ACCENT3,
                     LOCKSCREEN_CLOCK_COLOR_CODE_TEXT1,
-                    LOCKSCREEN_CLOCK_COLOR_CODE_TEXT2
+                    LOCKSCREEN_CLOCK_COLOR_CODE_TEXT2,
+                    LOCKSCREEN_CLOCK_CUSTOM_IMAGE,
+                    LOCKSCREEN_CLOCK_DATE_FORMAT
+            };
+        }
+        public static class LockscreenWidgets {
+            public static final String LOCKSCREEN_WIDGETS_ENABLED = "lockscreen_widgets_enabled";
+            public static final String LOCKSCREEN_WIDGETS_DEVICE_WIDGET = "lockscreen_device_widget";
+            public static final String LOCKSCREEN_WIDGETS = "lockscreen_widgets";
+            public static final String LOCKSCREEN_WIDGETS_EXTRAS = "lockscreen_widgets_extras";
+
+            // Customizations
+            // Device Widget
+            public static final String LOCKSCREEN_WIDGETS_DEVICE_WIDGET_CUSTOM_COLOR_SWITCH = "lockscreen_device_widget_custom_color";
+            public static final String LOCKSCREEN_WIDGETS_DEVICE_WIDGET_LINEAR_COLOR = "lockscreen_device_widget_linear_progress_color";
+            public static final String LOCKSCREEN_WIDGETS_DEVICE_WIDGET_CIRCULAR_COLOR = "lockscreen_device_widget_circular_progress_color";
+            public static final String LOCKSCREEN_WIDGETS_DEVICE_WIDGET_TEXT_COLOR = "lockscreen_device_widget_text_color";
+            public static final String LOCKSCREEN_WIDGETS_DEVICE_WIDGET_DEVICE = "lockscreen_device_widget_device_name";
+
+            // Custom Widgets Colors
+            public static final String LOCKSCREEN_WIDGETS_CUSTOM_COLOR = "lockscreen_widgets_custom_color";
+            public static final String LOCKSCREEN_WIDGETS_BIG_ACTIVE = "lockscreen_widgets_big_active";
+            public static final String LOCKSCREEN_WIDGETS_BIG_INACTIVE = "lockscreen_widgets_big_inactive";
+            public static final String LOCKSCREEN_WIDGETS_SMALL_ACTIVE = "lockscreen_widgets_small_active";
+            public static final String LOCKSCREEN_WIDGETS_SMALL_INACTIVE = "lockscreen_widgets_small_inactive";
+            public static final String LOCKSCREEN_WIDGETS_BIG_ICON_ACTIVE = "lockscreen_widgets_big_icon_active";
+            public static final String LOCKSCREEN_WIDGETS_BIG_ICON_INACTIVE = "lockscreen_widgets_big_icon_inactive";
+            public static final String LOCKSCREEN_WIDGETS_SMALL_ICON_ACTIVE = "lockscreen_widgets_small_icon_active";
+            public static final String LOCKSCREEN_WIDGETS_SMALL_ICON_INACTIVE = "lockscreen_widgets_small_icon_inactive";
+            public static final String LOCKSCREEN_WIDGETS_SCALE = "widget_scale";
+
+            // Weather Settings
+            public static final String LOCKSCREEN_WIDGETS_WEATHER_SETTINGS = "weather_settings";
+
+        }
+
+        // AOD
+        public static class AodClock {
+            public static final String AOD_CLOCK_SWITCH = "aod_custom_clock_switch";
+            public static final String AOD_CLOCK_STYLE = "aod_custom_clock_style";
+            public static final String AOD_CLOCK_CUSTOM_COLOR_SWITCH = "aod_custom_color_switch";
+            public static final String AOD_CLOCK_LINE_HEIGHT = "aod_clock_line_height";
+            public static final String AOD_CLOCK_CUSTOM_FONT = "aod_custom_font";
+            public static final String AOD_CLOCK_TEXT_SCALING = "aod_text_scaling";
+            public static final String AOD_CLOCK_COLOR_CODE_ACCENT1 = "aod_clock_color_code_accent1";
+            public static final String AOD_CLOCK_COLOR_CODE_ACCENT2 = "aod_clock_color_code_accent2";
+            public static final String AOD_CLOCK_COLOR_CODE_ACCENT3 = "aod_clock_color_code_accent3";
+            public static final String AOD_CLOCK_COLOR_CODE_TEXT1 = "aod_clock_color_code_text1";
+            public static final String AOD_CLOCK_COLOR_CODE_TEXT2 = "aod_clock_color_code_text2";
+            public static final String AOD_CLOCK_CUSTOM_USER_VALUE = "aod_clock_custom_user";
+            public static final String AOD_CLOCK_CUSTOM_DEVICE_VALUE = "aod_clock_custom_device";
+            public static final String AOD_CLOCK_CUSTOM_USER_IMAGE = "aod_clock_custom_user_image";
+            public static final String AOD_CLOCK_CUSTOM_IMAGE = "aod_clock_custom_image_switch";
+            public static final String AOD_CLOCK_DATE_FORMAT = "aod_clock_custom_format";
+
+        }
+
+        public static class AodWeather {
+            public static final String AOD_WEATHER = "AodWeather";
+
+            public static final String AOD_WEATHER_SWITCH = "aod_weather_enabled";
+            public static final String AOD_WEATHER_TEXT_SIZE = "aod_weather_text_size";
+            public static final String AOD_WEATHER_IMAGE_SIZE = "aod_weather_image_size";
+            public static final String AOD_WEATHER_UI_PREFS = "aod_weather_prefs";
+            public static final String AOD_WEATHER_SHOW_LOCATION = "aod_weather_show_location";
+            public static final String AOD_WEATHER_SHOW_CONDITION = "aod_weather_show_condition";
+            public static final String AOD_WEATHER_HUMIDITY = "aod_weather_show_humidity";
+            public static final String AOD_WEATHER_WIND = "aod_weather_show_wind";
+            public static final String AOD_WEATHER_COLOR_CAT = "aod_weather_colors_prefs";
+            public static final String AOD_WEATHER_CUSTOM_COLOR_SWITCH = "aod_weather_custom_color_switch";
+            public static final String AOD_WEATHER_CUSTOM_COLOR = "aod_weather_custom_color";
+            public static final String AOD_WEATHER_CENTERED = "aod_weather_centered";
+            public static final String AOD_WEATHER_CUSTOM_MARGINS = "aod_weather_custom_margins";
+            public static final String AOD_WEATHER_CUSTOM_MARGIN_LEFT = "aod_weather_margin_left";
+            public static final String AOD_WEATHER_CUSTOM_MARGIN_TOP = "aod_weather_margin_top";
+
+        }
+
+        public static class StatusbarNotificationPrefs {
+            public static final String NOTIF_TRANSPARENCY = "statusbar_notification_transparency";
+            public static final String NOTIF_TRANSPARENCY_VALUE = "statusbar_notification_transparency_value";
+            public static final String CUSTOMIZE_CLEAR_BUTTON = "customizeClearButton";
+            public static final String CLEAR_BUTTON_BG_LINK_ACCENT = "linkBackgroundAccent";
+            public static final String CLEAR_BUTTON_BG_COLOR = "clearButtonBgColor";
+            public static final String CLEAR_BUTTON_ICON_LINK_ACCENT = "linkIconAccent";
+            public static final String CLEAR_BUTTON_ICON_COLOR = "clearButtonIconColor";
+            public static final String[] CLEAR_ALL_BUTTON_PREFS = {
+                    CUSTOMIZE_CLEAR_BUTTON,
+                    CLEAR_BUTTON_BG_LINK_ACCENT,
+                    CLEAR_BUTTON_BG_COLOR,
+                    CLEAR_BUTTON_ICON_LINK_ACCENT,
+                    CLEAR_BUTTON_ICON_COLOR
             };
         }
 
         public static final String ADAPTIVE_PLAYBACK_ENABLED = "sound_adaptive_playback_main_switch";
         public static final String ADAPTIVE_PLAYBACK_TIMEOUT = "adaptive_playback_timeout";
+
+        public static final String SELECTED_TOAST_FRAME = "selectedToastFrame";
+        public static final String NOTIFICATION_CORNER_RADIUS = "notification_corner_radius";
+
+    }
+
+    public static class Weather {
+        public static final String WEATHER_ICON_PACK = "weather_icon_pack";
+        public static final String WEATHER_UPDATE_INTERVAL = "weather_update_interval";
+        public static final String WEATHER_PROVIDER = "weather_provider";
+        public static final String WEATHER_OWM_KEY = "owm_key";
+        public static final String WEATHER_YANDEX_KEY = "yandex_key";
+        public static final String WEATHER_UNITS = "weather_units";
+        public static final String WEATHER_CUSTOM_LOCATION = "weather_custom_location_switch";
     }
 
     public static class LockscreenWeather {
+        public static final String LOCKSCREEN_WEATHER = "LockscreenWeather";
+
         public static final String LOCKSCREEN_WEATHER_SWITCH = "lockscreen_weather_enabled";
-        public static final String LOCKSCREEN_WEATHER_UPDATE_INTERVAL = "weather_update_interval";
-        public static final String LOCKSCREEN_WEATHER_PROVIDER = "weather_provider";
-        public static final String LOCKSCREEN_WEATHER_OWM_KEY = "owm_key";
-        public static final String LOCKSCREEN_WEATHER_UNITS = "weather_units";
-        public static final String LOCKSCREEN_WEATHER_CUSTOM_LOCATION = "weather_custom_location_switch";
-        public static final String LOCKSCREEN_WEATHER_ICON_PACK = "weather_icon_pack";
         public static final String LOCKSCREEN_WEATHER_TEXT_SIZE = "weather_text_size";
         public static final String LOCKSCREEN_WEATHER_IMAGE_SIZE = "weather_image_size";
+        public static final String LOCKSCREEN_WEATHER_UI_PREFS = "lockscreen_weather_prefs";
         public static final String LOCKSCREEN_WEATHER_SHOW_LOCATION = "weather_show_location";
         public static final String LOCKSCREEN_WEATHER_SHOW_CONDITION = "weather_show_condition";
         public static final String LOCKSCREEN_WEATHER_HUMIDITY = "weather_show_humidity";
         public static final String LOCKSCREEN_WEATHER_WIND = "weather_show_wind";
         public static final String LOCKSCREEN_WEATHER_CUSTOM_COLOR_SWITCH = "weather_custom_color_switch";
+        public static final String LOCKSCREEN_WEATHER_CUSTOM_COLOR_CAT = "lockscreen_weather_colors_prefs";
         public static final String LOCKSCREEN_WEATHER_CUSTOM_COLOR = "weather_custom_color";
+        public static final String LOCKSCREEN_WEATHER_CENTERED = "weather_centered";
         public static final String LOCKSCREEN_WEATHER_CUSTOM_MARGINS = "weather_custom_margins";
         public static final String LOCKSCREEN_WEATHER_CUSTOM_MARGIN_LEFT = "weather_margin_left";
         public static final String LOCKSCREEN_WEATHER_CUSTOM_MARGIN_TOP = "weather_margin_top";
+        public static final String LOCKSCREEN_WEATHER_BACKGROUND = "weather_background";
 
         public static final String[] LOCKSCREEN_WEATHER_PREFS = {
                 LOCKSCREEN_WEATHER_SWITCH,
-                LOCKSCREEN_WEATHER_UPDATE_INTERVAL,
-                LOCKSCREEN_WEATHER_PROVIDER,
-                LOCKSCREEN_WEATHER_OWM_KEY,
-                LOCKSCREEN_WEATHER_UNITS,
-                LOCKSCREEN_WEATHER_CUSTOM_LOCATION,
-                LOCKSCREEN_WEATHER_ICON_PACK,
+                WEATHER_UPDATE_INTERVAL,
+                WEATHER_PROVIDER,
+                WEATHER_OWM_KEY,
+                WEATHER_UNITS,
+                WEATHER_CUSTOM_LOCATION,
+                WEATHER_ICON_PACK,
                 LOCKSCREEN_WEATHER_TEXT_SIZE,
                 LOCKSCREEN_WEATHER_IMAGE_SIZE,
                 LOCKSCREEN_WEATHER_HUMIDITY,
@@ -448,7 +593,8 @@ public class Constants {
                 LOCKSCREEN_WEATHER_SHOW_LOCATION,
                 LOCKSCREEN_WEATHER_SHOW_CONDITION,
                 LOCKSCREEN_WEATHER_CUSTOM_COLOR_SWITCH,
-                LOCKSCREEN_WEATHER_CUSTOM_COLOR
+                LOCKSCREEN_WEATHER_CUSTOM_COLOR,
+                LOCKSCREEN_WEATHER_BACKGROUND
         };
 
         public static final String[] LOCKSCREEN_WEATHER_MARGINS = {
@@ -481,6 +627,12 @@ public class Constants {
         public static final String PULSE_SOLID_UNITS_OPACITY = "pulse_solid_units_opacity";
         public static final String PULSE_SOLID_UNITS_COUNT = "pulse_solid_units_count";
         public static final String PULSE_SOLID_FUDGE_FACTOR = "pulse_solid_fudge_factor";
+        public static final String PULSE_CENTER_MIRRORED = "pulse_center_mirrored";
+        public static final String PULSE_VERTICAL_MIRROR = "pulse_vertical_mirror";
+        public static final String PULSE_GRAVITY = "pulse_gravity";
+        public static final String PULSE_LINE_SHOW_FLASH = "pulse_line_show_flash";
+        public static final String PULSE_LINE_WAVE_STROKE = "pulse_line_wave_stroke";
+        public static final String PULSE_LINE_WAVE_OPACITY = "pulse_line_wave_opacity";
 
         public static final String[] PULSE_PREFS = {
                 PULSE_NAVBAR,
@@ -499,40 +651,160 @@ public class Constants {
                 PULSE_SOLID_UNITS_ROUNDED,
                 PULSE_SOLID_UNITS_OPACITY,
                 PULSE_SOLID_UNITS_COUNT,
-                PULSE_SOLID_FUDGE_FACTOR
+                PULSE_SOLID_FUDGE_FACTOR,
+                PULSE_CENTER_MIRRORED,
+                PULSE_VERTICAL_MIRROR,
+                PULSE_GRAVITY,
+                PULSE_LINE_SHOW_FLASH,
+                PULSE_LINE_WAVE_STROKE,
+                PULSE_LINE_WAVE_OPACITY
         };
     }
 
+    // Actions
     public static final String ACTION_XPOSED_CONFIRMED = BuildConfig.APPLICATION_ID + ".ACTION_XPOSED_CONFIRMED_OC";
     public static final String ACTION_XPOSED_NOT_FOUND = BuildConfig.APPLICATION_ID + ".ACTION_XPOSED_NOT_FOUND_OC";
     public static final String ACTION_CHECK_XPOSED_ENABLED = BuildConfig.APPLICATION_ID + ".ACTION_CHECK_XPOSED_ENABLED_OC";
-    public static final String ACTION_CLEAR_ALL_TASKS = BuildConfig.APPLICATION_ID + ".ACTION_CLEAR_ALL_TASKS_OC";
-    public static final String ACTION_POWER_MENU = BuildConfig.APPLICATION_ID + ".ACTION_POWER_MENU_OC";
     public static final String ACTION_AUTH_SUCCESS_SHOW_ADVANCED_REBOOT = BuildConfig.APPLICATION_ID + ".ACTION_AUTH_SUCCESS_SHOW_ADVANCED_REBOOT_OC";
+    public static final String ACTION_SETTINGS_CHANGED = BuildConfig.APPLICATION_ID + ".ACTION_SETTINGS_CHANGED_OC";
+    public static final String ACTIONS_QS_CLOCK_FONT_CHANGEG = BuildConfig.APPLICATION_ID + ".ACTIONS_QS_CLOCK_FONT_CHANGEG_OC";
+    public static final String ACTIONS_QS_CLOCK_USER_IMAGE_CHANGED = BuildConfig.APPLICATION_ID + ".ACTIONS_QS_CLOCK_USER_IMAGE_CHANGED_OC";
+    public static final String ACTIONS_BOOT_COMPLETED = BuildConfig.APPLICATION_ID + ".ACTIONS_BOOT_COMPLETED";
+    public static final String ACTION_TILE_REMOVED = BuildConfig.APPLICATION_ID + ".ACTION_TILE_REMOVED_OC";
+    public static final String ACTION_WEATHER_INFLATED = BuildConfig.APPLICATION_ID + ".ACTION_WEATHER_INFLATED_OC";
+    public static final String ACTIONS_QS_PHOTO_CHANGED = BuildConfig.APPLICATION_ID + ".ACTIONS_QS_PHOTO_CHANGED_OC";
+    public static final String ACTION_SCREENSHOT = BuildConfig.APPLICATION_ID + ".ACTIONS_SCREENSHOT_OC";
+    public static final String ACTION_DEPTH_BACKGROUND_CHANGED = BuildConfig.APPLICATION_ID + ".ACTIONS_DEPTH_BACKGROUND_CHANGED_OC";
+    public static final String ACTION_DEPTH_SUBJECT_CHANGED = BuildConfig.APPLICATION_ID + ".ACTIONS_DEPTH_SUBJECT_CHANGED_OC";
+    public static final String ACTIONS_MEMC_FEATURE_GET = BuildConfig.APPLICATION_ID + ".ACTIONS_MEMC_FEATURE_GET_OC";
+    public static final String ACTIONS_MEMC_FEATURE_RECEIVED = BuildConfig.APPLICATION_ID + ".ACTIONS_MEMC_FEATURE_RECEIVED_OC";
+    public static final String ACTIONS_AOD_INVALIDATE_DEPTH = BuildConfig.APPLICATION_ID + ".ACTIONS_AOD_INVALIDATE_DEPTH";
 
-    public static final String ACTION_MAX_CHANGED = BuildConfig.APPLICATION_ID + ".ACTION_MAX_CHANGED_OC";
+    // AI Plugin
+    public static final String ACTION_EXTRACT_SUBJECT = "it.dhd.oxygencustomizer.aiplugin.ACTION_EXTRACT_SUBJECT";
+    public static final String ACTION_EXTRACT_SUCCESS = "it.dhd.oxygencustomizer.aiplugin.ACTION_EXTRACT_SUCCESS";
+    public static final String ACTION_EXTRACT_FAILURE = "it.dhd.oxygencustomizer.aiplugin.ACTION_EXTRACT_FAILURE";
+
+    // AI Plugin Extras
+    public static final String PLUGIN_URL = "https://github.com/DHD2280/Oxygen-Customizer-AI-Plugin/releases/latest/";
 
     public static final String XPOSED_RESOURCE_TEMP_DIR = Environment.getExternalStorageDirectory() + "/.oxygen_customizer";
     public static final String HEADER_IMAGE_DIR = XPOSED_RESOURCE_TEMP_DIR + "/header_image.png";
+    public static final String HEADER_CLOCK_USER_IMAGE = XPOSED_RESOURCE_TEMP_DIR + "/header_clock_user_image.png";
     public static final String HEADER_CLOCK_FONT_DIR = XPOSED_RESOURCE_TEMP_DIR + "/header_clock_font.ttf";
     public static final String LOCKSCREEN_CLOCK_FONT_DIR = XPOSED_RESOURCE_TEMP_DIR + "/lockscreen_clock_font.ttf";
     public static final String LOCKSCREEN_USER_IMAGE = XPOSED_RESOURCE_TEMP_DIR + "/lockscreen_user_image.png";
+    public static final String LOCKSCREEN_CUSTOM_IMAGE = XPOSED_RESOURCE_TEMP_DIR + "/lockscreen_custom_image.png";
+    public static final String AOD_USER_IMAGE = XPOSED_RESOURCE_TEMP_DIR + "/aod_user_image.png";
+    public static final String AOD_CUSTOM_IMAGE = XPOSED_RESOURCE_TEMP_DIR + "/aod_custom_image.png";
+    public static final String AOD_CLOCK_FONT_DIR = XPOSED_RESOURCE_TEMP_DIR + "/aod_clock_font.ttf";
     public static final String LOCKSCREEN_FINGERPRINT_FILE = XPOSED_RESOURCE_TEMP_DIR + "/lockscreen_fp_icon.png";
+    public static final String QS_PHOTO_DIR = XPOSED_RESOURCE_TEMP_DIR + "/qs_photo.png";
+    public static final String SETTINGS_OTA_CARD_DIR = XPOSED_RESOURCE_TEMP_DIR + "/settings_ota_card.png";
 
-    // View Tags
-    public static final String MEDIA_PROGRESSBAR = "media_progressbar";
-    public static final String MEDIA_PROGRESSBAR_VALUE = "media_progress_value";
-    public static final String BATTERY_PROGRESSBAR = "battery_progressbar";
-    public static final String BATTERY_PROGRESSBAR_VALUE = "battery_progress_value";
+    public static final String OPLUS_FEATURE_XML = "\t<oplus-feature name=\"%s\" />";
+
+    // Oplus Features
+    public static final String OPLUS_POCKET_STUDIO_FEATURE = "oplus.software.pocketstudio.support";
+
+    // MEMC
+    public static final String SETTINGS_SECURE_IRIS5_SWITCH = "osie_iris5_switch";
+    public static final String SETTINGS_SECURE_OSIE_MOTION_FLUENCY_SWITCH = "osie_motion_fluency_switch";
+    public static final String SETTINGS_SECURE_OSIE_MOTION_VALUE = "osie_motion_value";
+    public static final String SETTINGS_SECURE_OSIE_VIDEO_SWITCH = "osie_video_display_switch";
+    public static final Set<String> OPLUS_MEMC_FEATURES = new HashSet<>(Arrays.asList(
+            "oplus.software.display.pixelworks_enable",
+            "oplus.software.display.iris_enable",
+            "oplus.software.display.memc_enable",
+            "oplus.software.display.game.memc_enable"
+    ));
 
     // Resource names
     public static final String LOCKSCREEN_CLOCK_LAYOUT = "preview_lockscreen_clock_";
+    public static final String AOD_CLOCK_LAYOUT = "preview_aod_clock_";
     public static final String HEADER_CLOCK_LAYOUT = "preview_header_clock_";
 
     public static final String CLOCK_TAG = "clock";
     public static final String DATE_TAG = "date";
 
-    public static final String LATEST_VERSION_URL = "https://raw.githubusercontent.com/DHD2280/Oxygen-Customizer/stable/latestVersion.json";
-    public static final String LATEST_BETA_URL = "https://raw.githubusercontent.com/DHD2280/Oxygen-Customizer/beta/latestBeta.json";
+    // Chip Style
+    public static String getStyle(String key) {
+        return key + "_STYLE";
+    }
+    public static String getUseAccentColor(String key) {
+        return key + "_USE_ACCENT_COLOR";
+    }
+    public static String getUseAccentColorStroke(String key) {
+        return key + "_USE_ACCENT_COLOR_STROKE";
+    }
+    public static String getUseGradient(String key) {
+        return key + "_USE_GRADIENT";
+    }
+    public static String getGradientNum(String key, int num) {
+        return key + "_GRADIENT_" + num;
+    }
+    public static String getGradientOrientation(String key) {
+        return key + "_GRADIENT_ORIENTATION";
+    }
+    public static String getStrokeWidth(String key) {
+        return key + "_STROKE_WIDTH";
+    }
+    public static String getStrokeColor(String key) {
+        return key + "_STROKE_COLOR";
+    }
+    public static String getRoundedCorners(String key) {
+        return key + "_ROUNDED_CORNERS";
+    }
+    public static String getTopSxR(String key) {
+        return key + "_TOP_LEFT_RADIUS";
+    }
+    public static String getTopDxR(String key) {
+        return key + "_TOP_RIGHT_RADIUS";
+    }
+    public static String getBottomSxR(String key) {
+        return key + "_BOTTOM_LEFT_RADIUS";
+    }
+    public static String getBottomDxR(String key) {
+        return key + "_BOTTOM_RIGHT_RADIUS";
+    }
+    public static String getMarginSx(String key) {
+        return key + "_MARGIN_LEFT";
+    }
+    public static String getMarginDx(String key) {
+        return key + "_MARGIN_RIGHT";
+    }
+    public static String getMarginTop(String key) {
+        return key + "_MARGIN_TOP";
+    }
+    public static String getMarginBottom(String key) {
+        return key + "_MARGIN_BOTTOM";
+    }
+    public static String getPaddingSx(String key) {
+        return key + "_PADDING_LEFT";
+    }
+    public static String getPaddingDx(String key) {
+        return key + "_PADDING_RIGHT";
+    }
+    public static String getPaddingTop(String key) {
+        return key + "_PADDING_TOP";
+    }
+    public static String getPaddingBottom(String key) {
+        return key + "_PADDING_BOTTOM";
+    }
+
+    public static String getLockScreenSubjectCachePath() {
+        return Environment.getExternalStorageDirectory() + "/.oxygen_customizer/lswt.png";
+    }
+
+    public static String getLockScreenBitmapCachePath() {
+        return Environment.getExternalStorageDirectory() + "/.oxygen_customizer/lsw.jpg";
+    }
+
+    // Settings Icons Prefs
+    public static String SELECTED_SETTINGS_ICONS_SET = "selectedSettingsIconsSet";
+    public static String SELECTED_SETTINGS_ICONS_COLOR = "selectedSettignsIconsColor";
+    public static String SELECTED_SETTINGS_ICONS_BG_COLOR = "selectedSettignsIconsBgColor";
+    public static String SELECTED_SETTINGS_ICONS_BG_SHAPE = "selectedSettignsIconsBgShape";
+    public static String SELECTED_SETTINGS_ICONS_BG_SOLID = "selectedSettignsIconsBgSolid";
 
 }

@@ -1,27 +1,12 @@
 package it.dhd.oxygencustomizer.xposed.hooks.systemui.lockscreen;
 
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getBooleanField;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
 import static it.dhd.oxygencustomizer.utils.Constants.LOCKSCREEN_CLOCK_LAYOUT;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_CUSTOM_COLOR;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_CUSTOM_COLOR_SWITCH;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_CUSTOM_MARGINS;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_CUSTOM_MARGIN_LEFT;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_CUSTOM_MARGIN_TOP;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_HUMIDITY;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_IMAGE_SIZE;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_MARGINS;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_PREFS;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_SHOW_CONDITION;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_SHOW_LOCATION;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_SWITCH;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_TEXT_SIZE;
-import static it.dhd.oxygencustomizer.utils.Constants.LockscreenWeather.LOCKSCREEN_WEATHER_WIND;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_BOTTOM_MARGIN;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_COLOR_CODE_ACCENT1;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_COLOR_CODE_ACCENT2;
@@ -29,21 +14,24 @@ import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenCloc
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_COLOR_CODE_TEXT1;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_COLOR_CODE_TEXT2;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_COLOR_SWITCH;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_DEVICE_VALUE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_FONT;
-import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_USER;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_IMAGE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_USER_IMAGE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_CUSTOM_USER_VALUE;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_DATE_FORMAT;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_LINE_HEIGHT;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_PREFS;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_STYLE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_SWITCH;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_TEXT_SCALING;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_TOP_MARGIN;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_STOCK_CLOCK_RED_ONE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_STOCK_CLOCK_RED_ONE_COLOR;
-import static it.dhd.oxygencustomizer.utils.Constants.Preferences.LockscreenClock.LOCKSCREEN_CLOCK_PREFS;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
 import static it.dhd.oxygencustomizer.xposed.hooks.systemui.OpUtils.getPrimaryColor;
 import static it.dhd.oxygencustomizer.xposed.utils.ViewHelper.dp2px;
+import static it.dhd.oxygencustomizer.xposed.utils.ViewHelper.findViewWithTag;
 import static it.dhd.oxygencustomizer.xposed.utils.ViewHelper.loadLottieAnimationView;
 import static it.dhd.oxygencustomizer.xposed.utils.ViewHelper.setMargins;
 
@@ -56,12 +44,14 @@ import android.content.IntentFilter;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ImageDecoder;
 import android.graphics.Typeface;
 import android.graphics.drawable.AnimatedImageDrawable;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.DrawableContainer;
 import android.media.AudioManager;
 import android.os.BatteryManager;
 import android.os.Build;
@@ -72,52 +62,72 @@ import android.os.UserHandle;
 import android.os.UserManager;
 import android.text.Spannable;
 import android.text.SpannableString;
+import android.text.TextUtils;
 import android.text.format.DateFormat;
 import android.text.style.ForegroundColorSpan;
-import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.GridLayout;
 import android.widget.ImageView;
-import android.widget.LinearLayout;
 import android.widget.ProgressBar;
 import android.widget.RelativeLayout;
+import android.widget.TextClock;
 import android.widget.TextView;
 
+import androidx.annotation.DrawableRes;
 import androidx.core.content.ContextCompat;
 import androidx.core.content.res.ResourcesCompat;
+
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.load.Transformation;
+import com.bumptech.glide.load.resource.bitmap.CircleCrop;
+import com.bumptech.glide.load.resource.bitmap.RoundedCorners;
+import com.bumptech.glide.request.BaseRequestOptions;
 
 import java.io.File;
 import java.lang.reflect.Method;
 import java.util.Calendar;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.utils.Constants;
-import it.dhd.oxygencustomizer.weather.WeatherUpdateService;
+import it.dhd.oxygencustomizer.xposed.ResourceManager;
 import it.dhd.oxygencustomizer.xposed.XposedMods;
 import it.dhd.oxygencustomizer.xposed.utils.ArcProgressWidget;
+import it.dhd.oxygencustomizer.xposed.utils.DrawableConverter;
+import it.dhd.oxygencustomizer.xposed.utils.TimeUtils;
 import it.dhd.oxygencustomizer.xposed.utils.ViewHelper;
-import it.dhd.oxygencustomizer.xposed.views.CurrentWeatherView;
 
 public class LockscreenClock extends XposedMods {
 
-    private static final String TAG = "Oxygen Customizer - " + LockscreenClock.class.getSimpleName() + ": ";
-    private final static String listenPackage = Constants.Packages.SYSTEM_UI;
     public static final String OC_LOCKSCREEN_CLOCK_TAG = "oxygencustomizer_lockscreen_clock";
-    public static final String OC_DEPTH_WALLPAPER_TAG = "oxygencustomizer_depth_wallpaper";
-
-    private boolean customLockscreenClock = false;
+    private final static String listenPackage = Constants.Packages.SYSTEM_UI;
+    private static final long thresholdTime = 500; // milliseconds
+    private static Object mStockClock;
+    private static long lastUpdated = System.currentTimeMillis();
+    private final String customFont = Environment.getExternalStorageDirectory() + "/.oxygen_customizer/lockscreen_clock_font.ttf";
+    Class<?> LottieAn = null;
     private ViewGroup mClockViewContainer = null;
     private ViewGroup mStatusViewContainer = null;
     private RelativeLayout mClockView = null;
     private View mMediaHostContainer = null;
+    // Lockscreen Clock Prefs
+    private boolean customLockscreenClock = false;
     private int lockscreenClockStyle = 1;
+    private int topMargin, bottomMargin;
+    private float clockScale;
+    private int lineHeight;
+    private boolean customFontEnabled;
+    private String customName, customDeviceName;
+    private boolean useCustomUserImage;
+    private boolean useCustomImage;
+    private String mCustomDateFormat = "";
+    // Stock Clock
     private int mStockClockRed, mStockClockRedColor;
-    private static Object mStockClock;
     private UserManager mUserManager;
     private AudioManager mAudioManager;
     private ActivityManager mActivityManager;
@@ -131,19 +141,9 @@ public class LockscreenClock extends XposedMods {
     private int mBatteryPercentage = 1;
     private ImageView mVolumeLevelArcProgress;
     private ImageView mRamUsageArcProgress;
-    private static long lastUpdated = System.currentTimeMillis();
-    private static final long thresholdTime = 500; // milliseconds
+    private ImageView mBatteryArcProgress;
     private int accent1, accent2, accent3, text1, text2;
     private boolean customColor;
-    Class<?> LottieAn = null;
-    private boolean weatherEnabled = false, weatherShowLocation = true, weatherShowCondition = true;
-    private boolean weatherShowHumidity = true, weatherShowWind = true;
-    private boolean weatherCustomColor = false;
-    private int weatherColor = Color.WHITE;
-    private int weatherStartPadding = 0, weatherTextSize = 16, weatherImageSize = 18;
-    private boolean mCustomMargins = false;
-    private int mLeftMargin = 0, mTopMargin = 0;
-
     private final BroadcastReceiver mBatteryReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
@@ -163,12 +163,13 @@ public class LockscreenClock extends XposedMods {
         }
     };
 
+    private enum ImageType {
+        USER_IMAGE,
+        CUSTOM_IMAGE
+    }
+
     public LockscreenClock(Context context) {
         super(context);
-        int resourceId = mContext.getResources().getIdentifier("red_horizontal_single_clock_margin_start", "dimen", listenPackage);
-        if (resourceId > 0) {
-            weatherStartPadding = mContext.getResources().getDimensionPixelSize(resourceId);
-        } else { weatherStartPadding = dp2px(mContext, 32); }
     }
 
     @Override
@@ -200,23 +201,19 @@ public class LockscreenClock extends XposedMods {
                 Color.BLACK
         );
         customColor = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_COLOR_SWITCH, false);
-
-        // Weather
-        weatherEnabled = Xprefs.getBoolean(LOCKSCREEN_WEATHER_SWITCH, false);
-        weatherTextSize = Xprefs.getSliderInt(LOCKSCREEN_WEATHER_TEXT_SIZE, 16);
-        weatherImageSize = Xprefs.getSliderInt(LOCKSCREEN_WEATHER_IMAGE_SIZE, 18);
-        weatherShowLocation = Xprefs.getBoolean(LOCKSCREEN_WEATHER_SHOW_LOCATION, true);
-        weatherShowCondition = Xprefs.getBoolean(LOCKSCREEN_WEATHER_SHOW_CONDITION, true);
-        weatherShowHumidity = Xprefs.getBoolean(LOCKSCREEN_WEATHER_HUMIDITY, true);
-        weatherShowWind = Xprefs.getBoolean(LOCKSCREEN_WEATHER_WIND, true);
-        weatherCustomColor = Xprefs.getBoolean(LOCKSCREEN_WEATHER_CUSTOM_COLOR_SWITCH, false);
-        weatherColor = Xprefs.getInt(LOCKSCREEN_WEATHER_CUSTOM_COLOR, Color.WHITE);
-        mCustomMargins = Xprefs.getBoolean(LOCKSCREEN_WEATHER_CUSTOM_MARGINS, false);
-        mLeftMargin = Xprefs.getSliderInt(LOCKSCREEN_WEATHER_CUSTOM_MARGIN_LEFT, 0);
-        mTopMargin = Xprefs.getSliderInt(LOCKSCREEN_WEATHER_CUSTOM_MARGIN_TOP, 0);
+        topMargin = Xprefs.getSliderInt(LOCKSCREEN_CLOCK_TOP_MARGIN, 100);
+        bottomMargin = Xprefs.getSliderInt(LOCKSCREEN_CLOCK_BOTTOM_MARGIN, 40);
+        clockScale = Xprefs.getSliderFloat(LOCKSCREEN_CLOCK_TEXT_SCALING, 1.0f);
+        lineHeight = Xprefs.getSliderInt(LOCKSCREEN_CLOCK_LINE_HEIGHT, 0);
+        customFontEnabled = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_FONT, false);
+        customName = Xprefs.getString(LOCKSCREEN_CLOCK_CUSTOM_USER_VALUE, "");
+        customDeviceName = Xprefs.getString(LOCKSCREEN_CLOCK_CUSTOM_DEVICE_VALUE, "");
+        useCustomUserImage = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_USER_IMAGE, false);
+        useCustomImage = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_IMAGE, false);
+        mCustomDateFormat = Xprefs.getString(LOCKSCREEN_CLOCK_DATE_FORMAT, "");
 
         if (Key.length > 0) {
-            for(String LCPrefs : LOCKSCREEN_CLOCK_PREFS) {
+            for (String LCPrefs : LOCKSCREEN_CLOCK_PREFS) {
                 if (Key[0].equals(LCPrefs)) {
                     new Handler(Looper.getMainLooper()).post(this::updateClockView);
                 }
@@ -225,18 +222,11 @@ public class LockscreenClock extends XposedMods {
                     updateStockClock();
                 }
             }
-            for(String LCWeatherPref : LOCKSCREEN_WEATHER_PREFS) {
-                if (Key[0].equals(LCWeatherPref)) updateWeatherView();
-            }
-            for(String LCWeatherMargins : LOCKSCREEN_WEATHER_MARGINS) {
-                if (Key[0].equals(LCWeatherMargins)) updateMargins(CurrentWeatherView.getInstance());
-            }
         }
     }
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
-        if (!lpparam.packageName.equals(listenPackage)) return;
 
         LottieAn = findClass("com.airbnb.lottie.LottieAnimationView", lpparam.classLoader);
 
@@ -245,12 +235,13 @@ public class LockscreenClock extends XposedMods {
         Class<?> KeyguardStatusViewClass = findClass("com.android.keyguard.KeyguardStatusView", lpparam.classLoader);
 
         hookAllMethods(KeyguardStatusViewClass, "onFinishInflate", new XC_MethodHook() {
+            @SuppressLint("DiscouragedApi")
             @Override
             protected void afterHookedMethod(MethodHookParam param) {
 
-                mStatusViewContainer = (ViewGroup) getObjectField(param.thisObject, "mStatusViewContainer");
-
-                mClockViewContainer = mStatusViewContainer;
+                ViewGroup statusViewContainer = (ViewGroup) getObjectField(param.thisObject, "mStatusViewContainer");
+                mStatusViewContainer = (ViewGroup) param.thisObject;
+                mClockViewContainer = statusViewContainer;
 
                 // Hide stock clock
                 GridLayout KeyguardStatusView = (GridLayout) param.thisObject;
@@ -259,10 +250,7 @@ public class LockscreenClock extends XposedMods {
 
                 mMediaHostContainer = (View) getObjectField(param.thisObject, "mMediaHostContainer");
 
-
                 registerClockUpdater();
-
-                placeWeatherView();
             }
         });
 
@@ -283,7 +271,8 @@ public class LockscreenClock extends XposedMods {
                     TextView mTimeHour = (TextView) getObjectField(param.thisObject, "mTimeHour");
                     String mHour = (String) getObjectField(param.thisObject, "mHour");
                     setClockRed(mTimeHour, mHour);
-                } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {
+                }
             }
         });
 
@@ -307,7 +296,8 @@ public class LockscreenClock extends XposedMods {
                     String mHour = DateFormat.format(format, mTime).toString();
                     TextView mTimeHour = (TextView) param.thisObject;
                     setClockRed(mTimeHour, mHour);
-                } catch (Throwable ignored) {}
+                } catch (Throwable ignored) {
+                }
             }
         });
 
@@ -364,20 +354,24 @@ public class LockscreenClock extends XposedMods {
         if (mClockViewContainer == null) return;
 
         if (customLockscreenClock) {
-            if (mClockView != null && mClockView.getVisibility() != View.INVISIBLE) mClockView.setVisibility(View.INVISIBLE);
-            if (mMediaHostContainer != null && mMediaHostContainer.getVisibility() != View.INVISIBLE) mMediaHostContainer.setVisibility(View.INVISIBLE);
+            if (mClockView != null && mClockView.getVisibility() != View.INVISIBLE)
+                mClockView.setVisibility(View.INVISIBLE);
+            if (mMediaHostContainer != null && mMediaHostContainer.getVisibility() != View.INVISIBLE)
+                mMediaHostContainer.setVisibility(View.INVISIBLE);
         } else {
-            if (mClockView != null && mClockView.getVisibility() != View.VISIBLE) mClockView.setVisibility(View.VISIBLE);
-            if (mMediaHostContainer != null && mMediaHostContainer.getVisibility() != View.VISIBLE) mMediaHostContainer.setVisibility(View.VISIBLE);
+            if (mClockView != null && mClockView.getVisibility() != View.VISIBLE)
+                mClockView.setVisibility(View.VISIBLE);
+            if (mMediaHostContainer != null && mMediaHostContainer.getVisibility() != View.VISIBLE)
+                mMediaHostContainer.setVisibility(View.VISIBLE);
         }
 
 
         long currentTime = System.currentTimeMillis();
         boolean isClockAdded = mClockViewContainer.findViewWithTag(OC_LOCKSCREEN_CLOCK_TAG) != null;
-        boolean isDepthClock = mClockViewContainer.getTag() == OC_DEPTH_WALLPAPER_TAG;
 
         if (!customLockscreenClock) {
-            if (isClockAdded) mClockViewContainer.removeView(mClockViewContainer.findViewWithTag(OC_LOCKSCREEN_CLOCK_TAG));
+            if (isClockAdded)
+                mClockViewContainer.removeView(mClockViewContainer.findViewWithTag(OC_LOCKSCREEN_CLOCK_TAG));
             return;
         }
 
@@ -397,35 +391,6 @@ public class LockscreenClock extends XposedMods {
             clockView.setTag(OC_LOCKSCREEN_CLOCK_TAG);
 
             int idx = 0;
-            LinearLayout dummyLayout = null;
-
-            if (isDepthClock) {
-                /*
-                 If the clock view container is the depth wallpaper container, we need to
-                 add the clock view to the middle of foreground and background images
-                 */
-                if (mClockViewContainer.getChildCount() > 0) {
-                    idx = 1;
-                }
-
-                // Add a dummy layout to the status view container so that we can still move notifications
-                if (mStatusViewContainer != null) {
-                    String dummy_tag = "dummy_layout";
-                    dummyLayout = mStatusViewContainer.findViewWithTag(dummy_tag);
-
-                    if (dummyLayout == null) {
-                        dummyLayout = new LinearLayout(mContext);
-                        dummyLayout.setLayoutParams(new LinearLayout.LayoutParams(
-                                ViewGroup.LayoutParams.MATCH_PARENT,
-                                350
-                        ));
-                        dummyLayout.setTag(dummy_tag);
-
-                        mStatusViewContainer.addView(dummyLayout, 0);
-                    }
-                }
-            }
-
             if (clockView.getParent() != null) {
                 ((ViewGroup) clockView.getParent()).removeView(clockView);
             }
@@ -435,14 +400,6 @@ public class LockscreenClock extends XposedMods {
             modifyClockView(clockView);
             initSoundManager();
             initBatteryStatus();
-
-            if (isDepthClock && dummyLayout != null) {
-                ViewGroup.MarginLayoutParams dummyParams = (ViewGroup.MarginLayoutParams) dummyLayout.getLayoutParams();
-                ViewGroup.MarginLayoutParams clockParams = (ViewGroup.MarginLayoutParams) clockView.getLayoutParams();
-                dummyParams.topMargin = clockParams.topMargin;
-                dummyParams.bottomMargin = clockParams.bottomMargin;
-                dummyLayout.setLayoutParams(dummyParams);
-            }
         }
     }
 
@@ -473,15 +430,7 @@ public class LockscreenClock extends XposedMods {
     }
 
     private void modifyClockView(View clockView) {
-        int topMargin = Xprefs.getSliderInt(LOCKSCREEN_CLOCK_TOP_MARGIN, 100);
-        int bottomMargin = Xprefs.getSliderInt(LOCKSCREEN_CLOCK_BOTTOM_MARGIN, 40);
-        float clockScale = Xprefs.getSliderFloat(LOCKSCREEN_CLOCK_TEXT_SCALING, 1.0f);
-        String customFont = Environment.getExternalStorageDirectory() + "/.oxygen_customizer/lockscreen_clock_font.ttf";
-        int lineHeight = Xprefs.getSliderInt(LOCKSCREEN_CLOCK_LINE_HEIGHT, 0);
-        boolean customFontEnabled = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_FONT, false);
-        boolean useCustomName = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_USER, false);
-        String customName = Xprefs.getString(LOCKSCREEN_CLOCK_CUSTOM_USER_VALUE, getUserName());
-        boolean useCustomImage = Xprefs.getBoolean(LOCKSCREEN_CLOCK_CUSTOM_USER_IMAGE, false);
+
         int systemAccent = getPrimaryColor(mContext);
 
         Typeface typeface = null;
@@ -494,8 +443,10 @@ public class LockscreenClock extends XposedMods {
         ViewHelper.findViewWithTagAndChangeColor(clockView, "accent1", customColor ? accent1 : systemAccent);
         ViewHelper.findViewWithTagAndChangeColor(clockView, "accent2", customColor ? accent2 : systemAccent);
         ViewHelper.findViewWithTagAndChangeColor(clockView, "accent3", customColor ? accent3 : systemAccent);
-        ViewHelper.findViewWithTagAndChangeColor(clockView, "text1", customColor ? text1 : Color.WHITE);
-        ViewHelper.findViewWithTagAndChangeColor(clockView, "text2", customColor ? text2 : Color.WHITE);
+        if (customColor) {
+            ViewHelper.findViewWithTagAndChangeColor(clockView, "text1", text1);
+            ViewHelper.findViewWithTagAndChangeColor(clockView, "text2", text2);
+        }
 
         if (typeface != null) {
             ViewHelper.applyFontRecursively((ViewGroup) clockView, typeface);
@@ -507,29 +458,69 @@ public class LockscreenClock extends XposedMods {
             ViewHelper.applyTextScalingRecursively((ViewGroup) clockView, clockScale);
         }
 
+        TextClock textClock = (TextClock) findViewWithTag(clockView, "textClockDate");
+        if (!TextUtils.isEmpty(mCustomDateFormat) && textClock != null) {
+            try {
+                textClock.setFormat12Hour(mCustomDateFormat);
+                textClock.setFormat24Hour(mCustomDateFormat);
+            } catch (Throwable t) {
+                log("Error setting date format: " + t.getMessage());
+            }
+        }
+
+        TextView deviceName = (TextView) findViewWithTag(clockView, "device_name");
+        if (deviceName != null) {
+            deviceName.setText(customDeviceName.isEmpty() ? Build.MODEL : customDeviceName);
+        }
+
+        TextView username = (TextView) findViewWithTag(clockView, "username");
+        if (username != null) {
+            username.setText(customName.isEmpty() ? getUserName() : customName);
+        }
+
+        ImageView profilePicture = (ImageView) findViewWithTag(clockView, "profile_picture");
+        if (useCustomUserImage && profilePicture != null) {
+            profilePicture.post(() -> profilePicture.setImageDrawable(getCustomUserImage()));
+        }
+
+        ImageView customImage = (ImageView) findViewWithTag(clockView, "custom_image");
+        if (useCustomImage && customImage != null) {
+            customImage.post(() -> customImage.setImageDrawable(getCustomImage()));
+        }
+
         switch (lockscreenClockStyle) {
+            case 2 -> {
+                TextClock tickIndicator = (TextClock) findViewWithTag(clockView, "tickIndicator");
+                tickIndicator.setVisibility(View.GONE);
+                TextView hourView = (TextView) findViewWithTag(clockView, "hours");
+                TimeUtils.setCurrentTimeTextClockRed(tickIndicator, hourView, customColor ? accent1 : getPrimaryColor(mContext));
+            }
             case 5 -> {
-                mBatteryStatusView = clockView.findViewById(R.id.battery_status);
-                mBatteryLevelView = clockView.findViewById(R.id.battery_percentage);
-                mVolumeLevelView = clockView.findViewById(R.id.volume_level);
-                mBatteryProgress = clockView.findViewById(R.id.battery_progressbar);
-                mVolumeProgress = clockView.findViewById(R.id.volume_progressbar);
+                mBatteryStatusView = (TextView) findViewWithTag(clockView, "battery_status");
+                mBatteryLevelView = (TextView) findViewWithTag(clockView, "battery_percentage");
+                mVolumeLevelView = (TextView) findViewWithTag(clockView, "volume_level");
+                mBatteryProgress = (ProgressBar) findViewWithTag(clockView, "battery_progressbar");
+                mVolumeProgress = (ProgressBar) findViewWithTag(clockView, "volume_progressbar");
             }
             case 7 -> {
-                TextView usernameView = clockView.findViewById(R.id.summary);
-                usernameView.setText(useCustomName ? customName : getUserName());
-                ImageView imageView = clockView.findViewById(R.id.user_profile_image);
-                imageView.setImageDrawable(useCustomImage ? getCustomUserImage() : getUserImage());
+                ImageView imageView = (ImageView) findViewWithTag(clockView, "user_profile_image");
+                imageView.post(() ->
+                        imageView.setImageDrawable(useCustomUserImage ? getCustomUserImage() : getUserImage()));
             }
             case 19 -> {
-                mBatteryLevelView = clockView.findViewById(R.id.battery_percentage);
-                mBatteryProgress = clockView.findViewById(R.id.battery_progressbar);
-                mVolumeLevelArcProgress = clockView.findViewById(R.id.volume_progress);
-                mRamUsageArcProgress = clockView.findViewById(R.id.ram_usage_info);
+                mBatteryLevelView = (TextView) findViewWithTag(clockView, "battery_percentage");
+                mBatteryProgress = (ProgressBar) findViewWithTag(clockView, "battery_progressbar");
+                mVolumeLevelArcProgress = (ImageView) findViewWithTag(clockView, "volume_progress");
+                mRamUsageArcProgress = (ImageView) findViewWithTag(clockView, "ram_usage_info");
 
                 mBatteryProgress.setProgressTintList(ColorStateList.valueOf(customColor ? accent1 : getPrimaryColor(mContext)));
+            }
+            case 27 -> {
+                TextView hourView = (TextView) findViewWithTag(clockView, "textHour");
+                TextView minuteView = (TextView) findViewWithTag(clockView, "textMinute");
+                TextClock tickIndicator = (TextClock) findViewWithTag(clockView, "tickIndicator");
 
-                ((TextView) clockView.findViewById(R.id.device_name)).setText(Build.MODEL);
+                TimeUtils.setCurrentTimeTextClock(mContext, tickIndicator, hourView, minuteView);
             }
             default -> {
                 mBatteryStatusView = null;
@@ -537,6 +528,8 @@ public class LockscreenClock extends XposedMods {
                 mVolumeLevelView = null;
                 mBatteryProgress = null;
                 mVolumeProgress = null;
+                mVolumeLevelArcProgress = null;
+                mBatteryArcProgress = null;
             }
         }
     }
@@ -544,14 +537,14 @@ public class LockscreenClock extends XposedMods {
     private void initBatteryStatus() {
         if (mBatteryStatusView != null) {
             if (mBatteryStatus == BatteryManager.BATTERY_STATUS_CHARGING) {
-                mBatteryStatusView.setText(R.string.battery_charging);
+                mBatteryStatusView.setText(ResourceManager.modRes.getString(R.string.battery_charging));
             } else if (mBatteryStatus == BatteryManager.BATTERY_STATUS_DISCHARGING ||
                     mBatteryStatus == BatteryManager.BATTERY_STATUS_NOT_CHARGING) {
-                mBatteryStatusView.setText(R.string.battery_discharging);
+                mBatteryStatusView.setText(ResourceManager.modRes.getString(R.string.battery_discharging));
             } else if (mBatteryStatus == BatteryManager.BATTERY_STATUS_FULL) {
-                mBatteryStatusView.setText(R.string.battery_full);
+                mBatteryStatusView.setText(ResourceManager.modRes.getString(R.string.battery_full));
             } else if (mBatteryStatus == BatteryManager.BATTERY_STATUS_UNKNOWN) {
-                mBatteryStatusView.setText(R.string.battery_level_percentage);
+                mBatteryStatusView.setText(ResourceManager.modRes.getString(R.string.battery_level_percentage));
             }
         }
 
@@ -560,6 +553,18 @@ public class LockscreenClock extends XposedMods {
             if (lockscreenClockStyle == 19) {
                 mBatteryProgress.setProgressTintList(ColorStateList.valueOf(customColor ? accent1 : getPrimaryColor(mContext)));
             }
+        }
+        if (mBatteryArcProgress != null) {
+            Bitmap widgetBitmap = ArcProgressWidget.generateBitmap(
+                    mContext,
+                    mBatteryPercentage,
+                    appContext.getResources().getString(R.string.percentage_text, mBatteryPercentage),
+                    32,
+                    "BATTERY",
+                    20,
+                    customColor ? accent1 : getPrimaryColor(mContext)
+            );
+            mBatteryArcProgress.setImageBitmap(widgetBitmap);
         }
         if (mBatteryLevelView != null) {
             mBatteryLevelView.setText(appContext.getResources().getString(R.string.percentage_text, mBatteryPercentage));
@@ -600,6 +605,7 @@ public class LockscreenClock extends XposedMods {
         ActivityManager.MemoryInfo memoryInfo = new ActivityManager.MemoryInfo();
         mActivityManager.getMemoryInfo(memoryInfo);
         long usedMemory = memoryInfo.totalMem - memoryInfo.availMem;
+        if (memoryInfo.totalMem == 0) return;
         int usedMemoryPercentage = (int) ((usedMemory * 100) / memoryInfo.totalMem);
 
         if (mRamUsageArcProgress != null) {
@@ -640,15 +646,14 @@ public class LockscreenClock extends XposedMods {
             Bitmap bitmapUserIcon = (Bitmap) getUserIconMethod.invoke(mUserManager, userId);
             return new BitmapDrawable(mContext.getResources(), bitmapUserIcon);
         } catch (Throwable throwable) {
-            log(TAG + throwable);
+            log(throwable);
             return appContext.getResources().getDrawable(R.drawable.default_avatar);
         }
     }
 
-    private Drawable getCustomUserImage() {
-        Drawable customUserImage = null;
+    private Drawable getImageFromFile(String fileName, @DrawableRes int defaultImage) {
         try {
-            ImageDecoder.Source source = ImageDecoder.createSource(new File(Environment.getExternalStorageDirectory() + "/.oxygen_customizer/lockscreen_user_image.png"));
+            ImageDecoder.Source source = ImageDecoder.createSource(new File(Environment.getExternalStorageDirectory() + "/.oxygen_customizer/" + fileName));
 
             Drawable drawable = ImageDecoder.decodeDrawable(source);
 
@@ -658,9 +663,18 @@ public class LockscreenClock extends XposedMods {
             }
 
             return drawable;
-        } catch (Throwable ignored) {
-            return ResourcesCompat.getDrawable(appContext.getResources(), R.drawable.default_avatar, appContext.getTheme());
+        } catch (Throwable t) {
+            log(t);
+            return ResourcesCompat.getDrawable(appContext.getResources(), defaultImage, appContext.getTheme());
         }
+    }
+
+    private Drawable getCustomUserImage() {
+        return getImageFromFile("lockscreen_user_image.png", R.drawable.default_avatar);
+    }
+
+    private Drawable getCustomImage() {
+        return getImageFromFile("lockscreen_custom_image.png", R.drawable.relax);
     }
 
     private void updateStockClock() {
@@ -682,42 +696,6 @@ public class LockscreenClock extends XposedMods {
             }
         }
         tv.setText(spannableString, TextView.BufferType.SPANNABLE);
-    }
-
-    private void placeWeatherView() {
-        try {
-            CurrentWeatherView currentWeatherView = CurrentWeatherView.getInstance(mContext);
-            try {
-                ((ViewGroup) currentWeatherView.getParent()).removeView(currentWeatherView);
-            } catch (Throwable ignored) {
-            }
-            mClockViewContainer.addView(currentWeatherView);
-            refreshWeatherView(currentWeatherView);
-            updateMargins(currentWeatherView);
-        } catch (Throwable ignored) {
-        }
-    }
-
-    private void updateMargins(CurrentWeatherView weatherView) {
-        if (weatherView == null) return;
-        if (mCustomMargins) {
-            weatherView.setPadding(dp2px(mContext, mLeftMargin), dp2px(mContext, mTopMargin), 0, 0);
-        } else {
-            weatherView.setPadding(weatherStartPadding, 0, 0, 0);
-        }
-
-    }
-
-    private void refreshWeatherView(CurrentWeatherView currentWeatherView) {
-        if (currentWeatherView == null) return;
-        CurrentWeatherView.updateSizes(weatherTextSize, weatherImageSize);
-        CurrentWeatherView.updateColors(weatherCustomColor ? weatherColor : Color.WHITE);
-        CurrentWeatherView.updateWeatherSettings(weatherShowLocation, weatherShowCondition, weatherShowHumidity, weatherShowWind);
-        currentWeatherView.setVisibility(weatherEnabled ? View.VISIBLE : View.GONE);
-    }
-
-    private void updateWeatherView() {
-        refreshWeatherView(CurrentWeatherView.getInstance());
     }
 
     @Override

@@ -84,18 +84,44 @@
                     android:text="@string/chip_outlined"
                     android:textSize="14sp" />
 
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/mixedChip"
+                    style="?attr/materialButtonOutlinedStyle"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="8dp"
+                    android:layout_weight="1.0"
+                    android:ellipsize="marquee"
+                    android:paddingHorizontal="0dp"
+                    android:paddingTop="10dp"
+                    android:paddingBottom="11dp"
+                    android:singleLine="true"
+                    android:text="@string/chip_mixed"
+                    android:textSize="14sp" />
+
             </com.google.android.material.button.MaterialButtonToggleGroup>
 
             <it.dhd.oxygencustomizer.ui.widgets.CategoryWidget
+                android:id="@+id/gradientPrefs"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                app:titleText="@string/chip_color_props" />
+                app:titleText="@string/chip_gradient_props" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.ListWidget
+                android:id="@+id/gradientOrientation"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:entries="@array/gradient_orientation_entries"
+                app:entryValues="@array/gradient_orientation_values"
+                app:forcePosition="top"
+                app:titleText="@string/chip_gradient_orientation" />
 
             <it.dhd.oxygencustomizer.ui.widgets.SwitchWidget
                 android:id="@+id/accentSwitch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="visible"
+                app:forcePosition="middle"
                 app:isChecked="false"
                 app:titleText="@string/chip_use_accent" />
 
@@ -104,6 +130,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="visible"
+                app:forcePosition="middle"
                 app:isChecked="false"
                 app:titleText="@string/chip_use_gradient" />
 
@@ -111,6 +138,7 @@
                 android:id="@+id/colorPickerGradient1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="bottom"
                 app:titleText="@string/chip_gradient_color_1" />
 
             <it.dhd.oxygencustomizer.ui.widgets.ColorPickerWidget
@@ -118,6 +146,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:visibility="gone"
+                app:forcePosition="bottom"
                 app:titleText="@string/chip_gradient_color_2" />
 
             <it.dhd.oxygencustomizer.ui.widgets.ColorPickerWidget
@@ -133,10 +162,27 @@
                 android:layout_height="wrap_content"
                 app:titleText="@string/chip_stroke" />
 
+            <it.dhd.oxygencustomizer.ui.widgets.SwitchWidget
+                android:id="@+id/accentStrokeSwitch"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="visible"
+                app:forcePosition="top"
+                app:isChecked="false"
+                app:titleText="@string/chip_use_accent" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.ColorPickerWidget
+                android:id="@+id/strokeColor"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="middle"
+                app:titleText="@string/chip_stroke_color" />
+
             <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
                 android:id="@+id/strokeWidth"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="bottom"
                 app:sliderDefaultValue="0"
                 app:sliderStepSize="1"
                 app:sliderValue="1"
@@ -154,12 +200,14 @@
                 android:id="@+id/roundCornersSwitch"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="full"
                 app:titleText="@string/chip_round_corners" />
 
             <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
                 android:id="@+id/top_sx_corner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="middle"
                 app:sliderDefaultValue="0"
                 app:sliderStepSize="1"
                 app:sliderValue="0"
@@ -172,6 +220,7 @@
                 android:id="@+id/top_dx_corner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="middle"
                 app:sliderDefaultValue="0"
                 app:sliderStepSize="1"
                 app:sliderValue="0"
@@ -184,6 +233,7 @@
                 android:id="@+id/bottom_sx_corner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="middle"
                 app:sliderDefaultValue="0"
                 app:sliderStepSize="1"
                 app:sliderValue="0"
@@ -196,12 +246,127 @@
                 android:id="@+id/bottom_dx_corner"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
+                app:forcePosition="bottom"
                 app:sliderDefaultValue="0"
                 app:sliderStepSize="1"
                 app:sliderValue="0"
                 app:sliderValueFrom="0"
                 app:sliderValueTo="30"
                 app:titleText="@string/chip_round_corners_bottom_dx_radius"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.CategoryWidget
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:titleText="@string/custom_margins" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipMarginTop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="top"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/top"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipMarginLeft"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="middle"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/left"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipMarginRight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="middle"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/right"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipMarginBottom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="bottom"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/bottom"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.CategoryWidget
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:titleText="@string/custom_padding" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipPaddingTop"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="top"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/top"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipPaddingLeft"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="middle"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/left"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipPaddingRight"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="middle"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/right"
+                app:valueFormat="dp" />
+
+            <it.dhd.oxygencustomizer.ui.widgets.SliderWidget
+                android:id="@+id/chipPaddingBottom"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                app:forcePosition="bottom"
+                app:sliderDefaultValue="0"
+                app:sliderStepSize="1"
+                app:sliderValue="0"
+                app:sliderValueFrom="0"
+                app:sliderValueTo="8"
+                app:titleText="@string/bottom"
                 app:valueFormat="dp" />
 
         </LinearLayout>

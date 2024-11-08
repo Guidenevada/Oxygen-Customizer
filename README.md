@@ -5,9 +5,11 @@
 </div>
 <p align="center">
   <a href="https://github.com/DHD2280/Oxygen-Customizer/releases"><img src="https://img.shields.io/github/v/release/DHD2280/Oxygen-Customizer?style=for-the-badge&include_prereleases" alt="Release"></a>
+  <a href="https://github.com/DHD2280/Oxygen-Customizer/releases/tag/beta_builds"><img src="https://img.shields.io/badge/Download%20Latest-Beta-blue?style=for-the-badge" alt="Beta"></a>
   <a href="https://github.com/DHD2280/Oxygen-Customizer"><img alt="Repo Size" src="https://img.shields.io/github/repo-size/DHD2280/Oxygen-Customizer?style=for-the-badge"></a>
-  <a href="https://github.com/DHD2280/Oxygen-Customizer/actions"><img src="https://img.shields.io/github/actions/workflow/status/DHD2280/Oxygen-Customizer/build_debug.yml?branch=beta&label=Debug%20Build&style=for-the-badge" alt="Debug Build"></a>
-  <a href="https://t.me/oneplusitaliabcgroup"><img src="https://img.shields.io/badge/Telegram-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Telegram"></a>
+  <a href="https://github.com/DHD2280/Oxygen-Customizer/actions"><img src="https://img.shields.io/github/actions/workflow/status/DHD2280/Oxygen-Customizer/build_debug.yml?branch=beta&label=Nightliy%20Build&style=for-the-badge" alt="Nightly Build"></a>
+  <a href="https://t.me/OxygenCustomizerGroup"><img src="https://img.shields.io/badge/Support%20Group-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Support Group"></a>
+  <a href="https://t.me/OxygenCustomizer"><img src="https://img.shields.io/badge/Update%20Channel-2CA5E0?style=for-the-badge&logo=telegram&logoColor=white" alt="Update Channel"></a>
 </p>
 <div align="center">
 
@@ -28,10 +30,13 @@ Furthermore, the open-source nature of Oxygen Customizer encourages community co
 - [Contribution](#-contribution)
 - [FAQ](#-faq)
 - [Credits](#-credits)
+- [License](#-license)
+- [Disclaimer](#-disclaimer)
+- [Donations](#-donations)
 
 > [!CAUTION]
 > 
-> This app requires Magisk or KernelSU for root access and Xposed framework. Any alternative methods won't work.
+> This app requires Magisk, KernelSU & APatch for root access and XPosed/LSPosed framework. Any alternative methods won't work.
 
 # 🛠 Requirements
 
@@ -43,11 +48,27 @@ Furthermore, the open-source nature of Oxygen Customizer encourages community co
 
 # 👨‍💻 Installation
 
-  1. Download and install Oxygen Customizer app.
+  1. Download and install the Oxygen Customizer app.
 
-  2. Enable app in LSPosed.
+  ### Installation for Magisk Users:
+
+  2. Enable the Xposed module in LSPosed app.
+
+  3. Open the app, grant root permission and follow the instructions.
+
+  4. Wait for it to finish generating rom specific module.
+
+  5. Reboot the device when prompted.
+
+  ### Installation for KernelSU/APatch Users:
+
+  2. Grant SuperSU/root permission for Oxygen Customizer & SystemUI from KernelSU app
   
-  3. Restart your device.
+  3. Disable `Unmount modules` option if it's available in the app
+  
+  4. Open the app, wait for it to finish generating rom specific module.
+  
+  5. Reboot the device when prompted.
 
 # 🔒 Permissions
 
@@ -108,7 +129,7 @@ We highly appreciate and welcome all forms of contributions, ranging from code, 
 <details>
   <summary>What is the difference between Release build and Debug build?</summary>
 
-- [Release build](https://github.com/DHD2280/Oxygen-Customizer/releases/latest) is an optimized version intended for distribution to end-users, while [Debug build](https://github.com/DHD2280/Iconify/actions) includes additional features and information for debugging and development purposes.
+- [Release build](https://github.com/DHD2280/Oxygen-Customizer/releases/latest) is an optimized version intended for distribution to end-users, while [Debug build](https://github.com/DHD2280/Oxygen-Customizer/actions) includes additional features and information for debugging and development purposes.
 </details>
 
 <details>
@@ -132,7 +153,7 @@ We highly appreciate and welcome all forms of contributions, ranging from code, 
 <details>
   <summary>Where can I make a donation?</summary>
 
-- The preferred and designated means for donating to the project's developer is via "[PayPal](https://www.paypal.me/luigifale)".
+- You can donate via "[PayPal](https://www.paypal.me/luigifale)", or via "[Buy me a coffee](https://www.buymeacoffee.com/DHD2280)".
 </details>
 
 # ❤ Credits
@@ -160,3 +181,11 @@ Oxygen Customizer is licensed under GPLv3. Please see [`LICENSE`](./LICENSE.md) 
 > [!WARNING]
 > - Please note that Oxygen Customizer may not be fully compatible with all custom OOS variants.
 > - I cannot be held responsible for any potential damage or issues that may occur to your device while using Oxygen Customizer.
+
+# ⭐ Donations
+
+[<img src=".github/resources/PayPal.svg"
+alt='Donate with PayPal'
+height="80">](https://www.paypal/luigifale) [<img src=".github/resources/BMC.svg"
+alt='Donate with BMC'
+height="80">](https://www.buymeacoffee.com/DHD2280)

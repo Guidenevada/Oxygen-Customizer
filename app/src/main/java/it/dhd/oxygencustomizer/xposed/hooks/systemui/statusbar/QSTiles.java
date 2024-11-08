@@ -1,12 +1,12 @@
 package it.dhd.oxygencustomizer.xposed.hooks.systemui.statusbar;
 
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
 import static de.robv.android.xposed.XposedHelpers.getIntField;
 import static de.robv.android.xposed.XposedHelpers.setIntField;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsTiles.QS_COLUMNS;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsTiles.QS_COLUMNS_LANDSCAPE;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsTiles.QS_CUSTOMIZE_TILES;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsTiles.QS_QUICK_TILES;
 import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsTiles.QS_ROWS;
@@ -35,9 +35,7 @@ public class QSTiles extends XposedMods {
     private static int QSColQty = QS_COL_NOT_SET;
     private static int QQSTileQty = QQS_NOT_SET;
 
-    private static int QSRowQtyL = NOT_SET;
     private static int QSColQtyL = QS_COL_NOT_SET;
-    private static int QQSTileQtyL = QQS_NOT_SET;
 
     private boolean mCustomizeQSTiles = false;
 
@@ -53,6 +51,7 @@ public class QSTiles extends XposedMods {
         QQSTileQty = Xprefs.getSliderInt(QS_QUICK_TILES, QQS_NOT_SET);
         QSRowQty = Xprefs.getSliderInt(QS_ROWS, QS_ROW_NOT_SET);
         QSColQty = Xprefs.getSliderInt(QS_COLUMNS, QS_COL_NOT_SET);
+        QSColQtyL = Xprefs.getSliderInt(QS_COLUMNS_LANDSCAPE, QS_COL_NOT_SET);
 
         if (Key.length > 0) {
             for (String qsTilePref : QS_TILES_PREFS) {
@@ -82,34 +81,34 @@ public class QSTiles extends XposedMods {
                 int.class,
                 int.class,
                 new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                if (!mCustomizeQSTiles ||
-                        mContext.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE) return;
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        if (!mCustomizeQSTiles ||
+                                mContext.getResources().getConfiguration().orientation == Configuration.ORIENTATION_LANDSCAPE)
+                            return;
 
-                int mRows = getIntField(param.thisObject, "mRows");
-                setIntField(param.thisObject, "mRows", QSRowQty);
-                param.setResult(mRows != QSRowQty);
+                        int mRows = getIntField(param.thisObject, "mRows");
+                        setIntField(param.thisObject, "mRows", QSRowQty);
+                        param.setResult(mRows != QSRowQty);
 
-            }
-        });
-
+                    }
+                });
 
 
         hookAllMethods(TileLayout, "updateColumns",
                 new XC_MethodHook() {
-            @Override
-            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                if (!mCustomizeQSTiles) return;
+                    @Override
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        if (!mCustomizeQSTiles) return;
 
-                int mColumns = getIntField(param.thisObject, "mColumns");
-                int orientation = mContext.getResources().getConfiguration().orientation;
-                int newColumns = orientation == Configuration.ORIENTATION_PORTRAIT ? QSColQty : QSColQtyL;
-                setIntField(param.thisObject, "mColumns", newColumns);
-                param.setResult(mColumns != newColumns);
+                        int mColumns = getIntField(param.thisObject, "mColumns");
+                        int orientation = mContext.getResources().getConfiguration().orientation;
+                        int newColumns = orientation == Configuration.ORIENTATION_PORTRAIT ? QSColQty : QSColQtyL;
+                        setIntField(param.thisObject, "mColumns", newColumns);
+                        param.setResult(mColumns != newColumns);
 
-            }
-        });
+                    }
+                });
 
     }
 

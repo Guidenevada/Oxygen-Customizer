@@ -3,14 +3,16 @@ package it.dhd.oxygencustomizer.xposed.hooks.systemui.navbar;
 import static android.view.MotionEvent.ACTION_DOWN;
 import static de.robv.android.xposed.XposedBridge.hookAllConstructors;
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.findAndHookMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
+import static de.robv.android.xposed.XposedHelpers.getAdditionalInstanceField;
 import static de.robv.android.xposed.XposedHelpers.getFloatField;
 import static de.robv.android.xposed.XposedHelpers.getObjectField;
+import static de.robv.android.xposed.XposedHelpers.setAdditionalInstanceField;
 import static de.robv.android.xposed.XposedHelpers.setObjectField;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
+import static it.dhd.oxygencustomizer.xposed.hooks.framework.Buttons.toggleNotifications;
 
 import android.app.ActivityManager;
 import android.content.Context;
@@ -18,6 +20,7 @@ import android.content.Intent;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
+import android.graphics.Color;
 import android.graphics.Point;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -27,35 +30,38 @@ import android.os.SystemClock;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.MotionEvent;
+import android.view.View;
+import android.view.ViewGroup;
 import android.widget.Toast;
 
 import androidx.core.content.res.ResourcesCompat;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
 import de.robv.android.xposed.XC_MethodHook;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
-import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.R;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.xposed.ResourceManager;
+import it.dhd.oxygencustomizer.xposed.XPLauncher;
 import it.dhd.oxygencustomizer.xposed.XposedMods;
-import it.dhd.oxygencustomizer.xposed.hooks.framework.Buttons;
 import it.dhd.oxygencustomizer.xposed.utils.DrawableConverter;
-import it.dhd.oxygencustomizer.xposed.utils.ShellUtils;
 import it.dhd.oxygencustomizer.xposed.utils.SystemUtils;
 
 public class GestureNavbarManager extends XposedMods {
 
     private static final String listenPackage = Constants.Packages.SYSTEM_UI;
-
+    private static final int mLightColor = 0xEBFFFFFF, mDarkColor = 0x99000000; //original navbar colors
+    //region pill size
+    private static float widthFactor = 1f;
+    private static boolean navPillColorAccent = false;
+    private static boolean navPillCustomColor = false;
+    private static int navPillColor = Color.GRAY;
     private Object SideGestureConfigurationEx;
-
     //region Back gesture
-    private float backGestureHeightFractionLeft = 1f; // % of screen height. can be anything between 0 to 1
-    private float backGestureHeightFractionRight = 1f; // % of screen height. can be anything between 0 to 1
+    private List<Float> backGestureHeightFractionLeft = Arrays.asList(0f, 1f); // % of screen height. can be anything between 0 to 1
+    private List<Float> backGestureHeightFractionRight = Arrays.asList(0f, 1f); // % of screen height. can be anything between 0 to 1
     private boolean leftEnabled = true;
     private boolean rightEnabled = true;
     private boolean onRotationToo = true;
@@ -63,9 +69,14 @@ public class GestureNavbarManager extends XposedMods {
     private int overrideMode = 0;
     private int overrideLeft = 0;
     private int overrideRight = 0;
+    //endregion
     private int mDirection;
     private String QSExpandMethodName = "";
     private Object NotificationPanelViewController;
+    private Object mNavigationBarInflaterView = null;
+    //region pill color
+    private boolean colorReplaced = false;
+    //endregion
 
 
     public GestureNavbarManager(Context context) {
@@ -79,14 +90,34 @@ public class GestureNavbarManager extends XposedMods {
         //region Back gesture
         leftEnabled = Xprefs.getBoolean("gesture_left", true);
         rightEnabled = Xprefs.getBoolean("gesture_right", true);
-        backGestureHeightFractionLeft = Xprefs.getSliderInt( "gesture_left_height", 100) / 100f;
-        backGestureHeightFractionRight = Xprefs.getSliderInt( "gesture_right_height", 100) / 100f;
+        backGestureHeightFractionLeft = Xprefs.getSliderValues("gesture_left_height_double", 100f);
+        backGestureHeightFractionRight = Xprefs.getSliderValues("gesture_right_height_double", 100f);
         onRotationToo = Xprefs.getBoolean("gesture_on_rotate", true);
         overrideBack = Xprefs.getBoolean("gesture_override_holdback", false);
         overrideMode = Integer.parseInt(Xprefs.getString("gesture_override_holdback_mode", "0"));
         overrideLeft = Integer.parseInt(Xprefs.getString("gesture_override_holdback_left", "0"));
         overrideRight = Integer.parseInt(Xprefs.getString("gesture_override_holdback_right", "0"));
         //endregion
+
+        //region pill size
+        widthFactor = Xprefs.getSliderInt("GesPillWidthModPos", 50) * .02f;
+        //endregion
+
+        //region pill color
+        navPillColorAccent = Xprefs.getBoolean("navPillColorAccent", false);
+        navPillCustomColor = Xprefs.getBoolean("navPillCustomColor", false);
+        navPillColor = Xprefs.getInt("navPillColor", Color.GRAY);
+        //endregion
+
+        if (Key.length > 0) {
+            if (Key[0].equals("GesPillWidthModPos") ||
+                    Key[0].equals("GesPillHeightFactor") ||
+                    Key[0].equals("navPillColorAccent") ||
+                    Key[0].equals("navPillCustomColor") ||
+                    Key[0].equals("navPillColor")) {
+                refreshNavbar();
+            }
+        }
     }
 
     @Override
@@ -101,60 +132,61 @@ public class GestureNavbarManager extends XposedMods {
         }
         Class<?> SideGestureNavView;
         try {
-          SideGestureNavView = findClass("com.oplus.systemui.navigationbar.gesture.sidegesture.SideGestureNavView", lpparam.classLoader);
+            SideGestureNavView = findClass("com.oplus.systemui.navigationbar.gesture.sidegesture.SideGestureNavView", lpparam.classLoader);
         } catch (Throwable t) {
             SideGestureNavView = findClass("com.oplusos.systemui.navigationbar.gesture.sidegesture.SideGestureNavView", lpparam.classLoader); // OOS 13
         }
 
-            if (Build.VERSION.SDK_INT >= 34) {
-                hookAllConstructors(SideGestureDetector, new XC_MethodHook() {
-                    @Override
-                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                        SideGestureConfigurationEx = getObjectField(param.thisObject, "mSideGestureConfiguration");
-                    }
-                });
+        if (Build.VERSION.SDK_INT >= 34) {
+            hookAllConstructors(SideGestureDetector, new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                    SideGestureConfigurationEx = getObjectField(param.thisObject, "mSideGestureConfiguration");
+                }
+            });
 
-                hookAllMethods(SideGestureDetector, "onMotionEventImpl", new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        MotionEvent ev = (MotionEvent) param.args[0];
+            hookAllMethods(SideGestureDetector, "onMotionEventImpl", new XC_MethodHook() {
+                @Override
+                protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                    MotionEvent ev = (MotionEvent) param.args[0];
 
-                        if (getForegroundApp()[0].equals(getDefaultLauncherPackageName())) return;
+                    if (getForegroundApp()[0].equals(getDefaultLauncherPackageName())) return;
 
-                        Point mDisplaySize = (Point) getObjectField(param.thisObject, "mDisplaySize");
-                        boolean isLeftSide = ev.getX() < (mDisplaySize.x / 3f);
-                        mDirection = isLeftSide ? 0 : 1;
-                        if (ev.getActionMasked() == ACTION_DOWN) //down action is enough. once gesture is refused it won't accept further actions
-                        {
-                            int mBottomGestureHeight = (int) callMethod(SideGestureConfigurationEx, "getBottomGestureAreaHeight");
-                            int rotation = (int) getFloatField(param.thisObject, "mRotation");
-                            if (notWithinInsets(ev.getX(),
-                                    ev.getY(),
-                                    mDisplaySize,
-                                    mBottomGestureHeight, rotation)) {
-                                setObjectField(param.thisObject, "mAllowGesture", false); //act like the gesture was not good enough
-                                param.setResult(null); //and stop the current method too
-                            }
+                    Point mDisplaySize = (Point) getObjectField(param.thisObject, "mDisplaySize");
+                    boolean isLeftSide = ev.getX() < (mDisplaySize.x / 3f);
+                    mDirection = isLeftSide ? 0 : 1;
+                    if (ev.getActionMasked() == ACTION_DOWN) //down action is enough. once gesture is refused it won't accept further actions
+                    {
+                        int mBottomGestureHeight = (int) callMethod(SideGestureConfigurationEx, "getBottomGestureAreaHeight");
+                        int rotation = (int) getFloatField(param.thisObject, "mRotation");
+                        if (notWithinInsets(ev.getX(),
+                                ev.getY(),
+                                mDisplaySize,
+                                mBottomGestureHeight, rotation)) {
+                            setObjectField(param.thisObject, "mAllowGesture", false); //act like the gesture was not good enough
+                            param.setResult(null); //and stop the current method too
                         }
                     }
-                });
-            } else {
-                findAndHookMethod(SideGestureDetector, "isWithinInsets",
-                        int.class,
-                        int.class,
-                        new XC_MethodHook() {
-                    @Override
-                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
-                        int x = (int) param.args[0];
-                        int y = (int) param.args[1];
+                }
+            });
+        } else {
+            findAndHookMethod(SideGestureDetector, "isWithinInsets",
+                    int.class,
+                    int.class,
+                    new XC_MethodHook() {
+                        @Override
+                        protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                            int x = (int) param.args[0];
+                            int y = (int) param.args[1];
 
 
-                        if (getForegroundApp()[0].equals(getDefaultLauncherPackageName())) return;
+                            if (getForegroundApp()[0].equals(getDefaultLauncherPackageName()))
+                                return;
 
-                        Point mDisplaySize = (Point) getObjectField(param.thisObject, "mDisplaySize");
-                        boolean isLeftSide = x < (mDisplaySize.x / 3f);
-                        mDirection = isLeftSide ? 0 : 1;
-                            int mBottomGestureHeight = (int) mContext.getResources().getDimensionPixelSize(mContext.getResources().getIdentifier("bottom_gesture_area_height", "dimen", listenPackage));
+                            Point mDisplaySize = (Point) getObjectField(param.thisObject, "mDisplaySize");
+                            boolean isLeftSide = x < (mDisplaySize.x / 3f);
+                            mDirection = isLeftSide ? 0 : 1;
+                            int mBottomGestureHeight = mContext.getResources().getDimensionPixelSize(mContext.getResources().getIdentifier("bottom_gesture_area_height", "dimen", listenPackage));
                             int rotation = (int) getFloatField(param.thisObject, "mRotation");
                             if (notWithinInsets(x,
                                     y,
@@ -163,9 +195,9 @@ public class GestureNavbarManager extends XposedMods {
                                 setObjectField(param.thisObject, "mAllowGesture", false); //act like the gesture was not good enough
                                 param.setResult(false); //and stop the current method too
                             }
-                    }
-                });
-            }
+                        }
+                    });
+        }
 
         hookAllMethods(SideGestureNavView, "setAppIcon", new XC_MethodHook() {
             @Override
@@ -222,6 +254,7 @@ public class GestureNavbarManager extends XposedMods {
                 ? "expandToQs" //A14
                 : "expandWithQs"; //A13
 
+
         hookAllConstructors(NotificationPanelViewControllerClass, new XC_MethodHook() {
             @Override
             protected void afterHookedMethod(MethodHookParam param) throws Throwable {
@@ -229,12 +262,73 @@ public class GestureNavbarManager extends XposedMods {
             }
         });
 
-        hookAllMethods(NotificationPanelViewControllerClass, "createTouchHandler", new XC_MethodHook() {
+        Class<?> OplusNavigationBarInflaterView = findClass("com.oplusos.systemui.navigationbar.OplusNavigationBarInflaterView", lpparam.classLoader);
+
+        Class<?> OplusNavigationHandle;
+        try {
+            OplusNavigationHandle = findClass("com.oplus.systemui.navigationbar.gesture.sidegesture.OplusNavigationHandle", lpparam.classLoader);
+        } catch (Throwable t) {
+            OplusNavigationHandle = findClass("com.oplusos.systemui.navigationbar.gesture.sidegesture.OplusNavigationHandle", lpparam.classLoader); // OOS 13
+        }
+        //region pill color
+        hookAllMethods(OplusNavigationHandle, "setDarkIntensity", new XC_MethodHook() {
             @Override
-            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
-                NotificationPanelViewController = param.thisObject;
+            protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                if (navPillColorAccent || colorReplaced) {
+                    setObjectField(param.thisObject, "mLightColor", (navPillColorAccent) ? mContext.getResources().getColor(android.R.color.system_accent1_200, mContext.getTheme()) : mLightColor);
+                    setObjectField(param.thisObject, "mDarkColor", (navPillColorAccent) ? mContext.getResources().getColor(android.R.color.system_accent1_600, mContext.getTheme()) : mDarkColor);
+                    colorReplaced = true;
+                }
             }
         });
+        //endregion
+
+        //region pill size
+        hookAllMethods(OplusNavigationHandle,
+                "setVertical", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        if (widthFactor != 1f) {
+                            View result = (View) param.thisObject;
+                            ViewGroup.LayoutParams resultLayoutParams = result.getLayoutParams();
+                            int originalWidth;
+                            try {
+                                originalWidth = (int) getAdditionalInstanceField(param.thisObject, "originalWidth");
+                            } catch (Throwable ignored) {
+                                originalWidth = resultLayoutParams.width;
+                                setAdditionalInstanceField(param.thisObject, "originalWidth", originalWidth);
+                            }
+
+                            resultLayoutParams.width = Math.round(originalWidth * widthFactor);
+                        }
+                    }
+                });
+
+
+        hookAllConstructors(OplusNavigationBarInflaterView, new XC_MethodHook() {
+            @Override
+            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                mNavigationBarInflaterView = param.thisObject;
+                refreshNavbar();
+            }
+        });
+
+        hookAllMethods(OplusNavigationBarInflaterView,
+                "createView", new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        if (widthFactor != 1f) {
+                            String button = (String) callMethod(param.thisObject, "extractButton", param.args[0]);
+                            if (!button.equals("home_handle")) return;
+
+                            View result = (View) param.getResult();
+                            ViewGroup.LayoutParams resultLayoutParams = result.getLayoutParams();
+                            resultLayoutParams.width = Math.round(resultLayoutParams.width * widthFactor);
+                            result.setLayoutParams(resultLayoutParams);
+                        }
+                    }
+                });
+        //endregion
 
     }
 
@@ -261,7 +355,9 @@ public class GestureNavbarManager extends XposedMods {
             case 3 -> takeScreenshot();
             case 4 -> showQs();
             case 5 -> showPowerMenu();
-            case 7 -> callMethod(SystemUtils.PowerManager(), "goToSleep", SystemClock.uptimeMillis());
+            case 6 -> toggleNotifications();
+            case 7 ->
+                    callMethod(SystemUtils.PowerManager(), "goToSleep", SystemClock.uptimeMillis());
         }
     }
 
@@ -276,14 +372,34 @@ public class GestureNavbarManager extends XposedMods {
             return true;
         }
 
-        int mEdgeHeight = isLeftSide ?
+
+        float topLeft = backGestureHeightFractionLeft.size() == 2 ? backGestureHeightFractionLeft.get(1) / 100f : 1f;
+        float topRight = backGestureHeightFractionLeft.size() == 2 ? backGestureHeightFractionRight.get(1) / 100f : 1f;
+        float bottomLeft = backGestureHeightFractionLeft.size() == 2 ? backGestureHeightFractionLeft.get(0) / 100f : 0 / 100f;
+        float bottomRight = backGestureHeightFractionRight.size() == 2 ? backGestureHeightFractionRight.get(0) / 100f : 0 / 100f;
+
+        return isLeftSide ?
+                y < (mDisplaySize.y
+                        - mBottomGestureHeight
+                        - Math.round(mDisplaySize.y * topLeft))
+                        || y > (mDisplaySize.y
+                        - mBottomGestureHeight
+                        - Math.round(mDisplaySize.y * bottomLeft)) :
+                y < (mDisplaySize.y
+                        - mBottomGestureHeight
+                        - Math.round(mDisplaySize.y * topRight))
+                        || y > (mDisplaySize.y
+                        - mBottomGestureHeight
+                        - Math.round(mDisplaySize.y * bottomRight));
+
+        /*int mEdgeHeight = isLeftSide ?
                 Math.round(mDisplaySize.y * backGestureHeightFractionLeft) :
                 Math.round(mDisplaySize.y * backGestureHeightFractionRight);
 
         return mEdgeHeight != 0
                 && y < (mDisplaySize.y
                 - mBottomGestureHeight
-                - mEdgeHeight);
+                - mEdgeHeight);*/
     }
     //endregion
 
@@ -305,7 +421,6 @@ public class GestureNavbarManager extends XposedMods {
 
     private void killForegroundApp() {
         Handler mainHandler = new Handler(Looper.getMainLooper());
-        Log.d("KillAppNow", "Killing foreground app");
         mainHandler.post(() -> {
             try {
                 ActivityManager am = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
@@ -314,18 +429,12 @@ public class GestureNavbarManager extends XposedMods {
                 String foregroundApp = null;
                 String[] appInfo = getForegroundApp();
                 foregroundApp = appInfo[0];
-                String uid = appInfo[1];
-                log("Foreground app: " + foregroundApp + " with UID: " + uid);
-
 
                 if (foregroundApp != null && !foregroundApp.equals(Constants.Packages.SYSTEM_UI) && !foregroundApp.equals(getDefaultLauncherPackageName())) {
                     //am.killBackgroundProcesses(foregroundApp);
-                    if (ShellUtils.checkRootPermission()) {
-                        List<String> commands = new ArrayList<>();
-                        commands.add("killall " + foregroundApp);
-                        commands.add("am force-stop " + foregroundApp);
-                        ShellUtils.execCommand(commands, true);
-                    }
+                    String finalForegroundApp = foregroundApp;
+                    XPLauncher.enqueueProxyCommand(proxy -> proxy.runCommand("killall " + finalForegroundApp));
+                    XPLauncher.enqueueProxyCommand(proxy -> proxy.runCommand("am force-stop " + finalForegroundApp));
                     String appLabel = getApplicationLabel(foregroundApp, mContext.getPackageManager());
                     Toast.makeText(mContext, "Killed: " + appLabel, Toast.LENGTH_SHORT).show();
                 } else {
@@ -342,19 +451,18 @@ public class GestureNavbarManager extends XposedMods {
     }
 
     private void showQs() {
-        if (TextUtils.isEmpty(QSExpandMethodName) || NotificationPanelViewController == null) return;
+        if (TextUtils.isEmpty(QSExpandMethodName) || NotificationPanelViewController == null)
+            return;
 
         try {
-            callMethod(NotificationPanelViewController, QSExpandMethodName);
+            new Handler(Looper.getMainLooper()).post(() -> callMethod(NotificationPanelViewController, QSExpandMethodName));
         } catch (Throwable t) {
             Log.e("ShowQs", "Error in showQs", t);
         }
     }
 
     private void showPowerMenu() {
-        Intent broadcast = new Intent(Constants.ACTION_POWER_MENU);
-        broadcast.setPackage(BuildConfig.APPLICATION_ID);
-        mContext.sendBroadcast(broadcast);
+
     }
 
     private String getDefaultLauncherPackageName() {
@@ -375,6 +483,15 @@ public class GestureNavbarManager extends XposedMods {
             return packageName; // Fallback to package name if the app label is not found
         }
     }
+
+    //region pill size
+    private void refreshNavbar() {
+        try {
+            callMethod(mNavigationBarInflaterView, "updateLayout");
+        } catch (Throwable ignored) {
+        }
+    }
+    //endregion
 
     @Override
     public boolean listensTo(String packageName) {

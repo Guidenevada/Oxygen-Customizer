@@ -1,88 +1,83 @@
 package it.dhd.oxygencustomizer.ui.activity;
 
 import static androidx.preference.PreferenceManager.getDefaultSharedPreferences;
-
 import static it.dhd.oxygencustomizer.ui.fragments.UpdateFragment.UPDATES_CHANNEL_ID;
 
 import android.annotation.SuppressLint;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
-import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
-import android.util.Log;
 import android.view.MenuItem;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.ActionBar;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.appcompat.widget.Toolbar;
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
 import androidx.fragment.app.FragmentTransaction;
-import androidx.navigation.NavController;
-import androidx.navigation.fragment.NavHostFragment;
-import androidx.navigation.ui.AppBarConfiguration;
-import androidx.navigation.ui.NavigationUI;
 import androidx.preference.Preference;
 import androidx.preference.PreferenceFragmentCompat;
 
-import com.google.android.material.bottomnavigation.BottomNavigationView;
-import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.jaredrummler.android.colorpicker.ColorPickerDialog;
 import com.jaredrummler.android.colorpicker.ColorPickerDialogListener;
 import com.topjohnwu.superuser.Shell;
 
 import org.greenrobot.eventbus.EventBus;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 import it.dhd.oxygencustomizer.R;
-import it.dhd.oxygencustomizer.customprefs.preferencesearch.SearchPreferenceResult;
-import it.dhd.oxygencustomizer.customprefs.preferencesearch.SearchPreferenceResultListener;
 import it.dhd.oxygencustomizer.databinding.ActivityMainBinding;
+import it.dhd.oxygencustomizer.ui.base.BaseActivity;
 import it.dhd.oxygencustomizer.ui.events.ColorDismissedEvent;
 import it.dhd.oxygencustomizer.ui.events.ColorSelectedEvent;
 import it.dhd.oxygencustomizer.ui.fragments.Hooks;
 import it.dhd.oxygencustomizer.ui.fragments.Mods;
 import it.dhd.oxygencustomizer.ui.fragments.Settings;
 import it.dhd.oxygencustomizer.ui.fragments.UpdateFragment;
+import it.dhd.oxygencustomizer.ui.fragments.UserInterface;
 import it.dhd.oxygencustomizer.ui.fragments.mods.Buttons;
 import it.dhd.oxygencustomizer.ui.fragments.mods.Launcher;
-import it.dhd.oxygencustomizer.ui.fragments.mods.lockscreen.Lockscreen;
 import it.dhd.oxygencustomizer.ui.fragments.mods.Statusbar;
+import it.dhd.oxygencustomizer.ui.fragments.mods.WeatherSettings;
+import it.dhd.oxygencustomizer.ui.fragments.mods.aod.AodClock;
+import it.dhd.oxygencustomizer.ui.fragments.mods.aod.AodWeather;
+import it.dhd.oxygencustomizer.ui.fragments.mods.lockscreen.Lockscreen;
+import it.dhd.oxygencustomizer.ui.fragments.mods.lockscreen.LockscreenClockFragment;
+import it.dhd.oxygencustomizer.ui.fragments.mods.lockscreen.LockscreenWeather;
 import it.dhd.oxygencustomizer.ui.fragments.mods.navbar.Gesture;
 import it.dhd.oxygencustomizer.ui.fragments.mods.qsheader.QsHeaderClock;
 import it.dhd.oxygencustomizer.ui.fragments.mods.qsheader.QsHeaderImage;
 import it.dhd.oxygencustomizer.ui.fragments.mods.quicksettings.QuickSettings;
 import it.dhd.oxygencustomizer.ui.fragments.mods.quicksettings.QuickSettingsCustomization;
 import it.dhd.oxygencustomizer.ui.fragments.mods.quicksettings.QuickSettingsTiles;
+import it.dhd.oxygencustomizer.ui.models.SearchPreferenceItem;
+import it.dhd.oxygencustomizer.ui.preferences.preferencesearch.SearchPreferenceResult;
+import it.dhd.oxygencustomizer.ui.preferences.preferencesearch.SearchPreferenceResultListener;
 import it.dhd.oxygencustomizer.utils.AppUtils;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.utils.PreferenceHelper;
+import it.dhd.oxygencustomizer.utils.overlay.OverlayUtil;
 import it.dhd.oxygencustomizer.xposed.utils.ExtendedSharedPreferences;
 
-public class MainActivity extends AppCompatActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback, ColorPickerDialogListener, SearchPreferenceResultListener {
+public class MainActivity extends BaseActivity implements PreferenceFragmentCompat.OnPreferenceStartFragmentCallback, ColorPickerDialogListener, SearchPreferenceResultListener {
 
     private Integer selectedFragment = null;
-    private NavHostFragment navHostFragment;
     private ActivityMainBinding binding;
-    private BottomNavigationView navigationView;
     private static FragmentManager fragmentManager;
     private static final String TITLE_TAG = "mainActivityTitle";
     private static ActionBar actionBar;
     private ColorPickerDialog.Builder colorPickerDialog;
-    public static final List<Object[]> prefsList = new ArrayList<>();
+    public static final List<SearchPreferenceItem> prefsList = new ArrayList<>();
     private Mods modsFragment;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
-        tryMigratePrefs();
 
         fragmentManager = getSupportFragmentManager();
         binding = ActivityMainBinding.inflate(getLayoutInflater());
@@ -90,51 +85,55 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         createChannels();
 
         if (savedInstanceState == null) {
-            replaceFragment(new Mods());
+            replaceFragment(!OverlayUtil.overlayExists() ?
+                    new Mods() :
+                    new UserInterface());
         } else {
             setHeader(this, savedInstanceState.getCharSequence(TITLE_TAG));
         }
 
-        if (getIntent() != null && getIntent().getBooleanExtra("updateTapped", false)) {
-            Log.d("MainActivity", "onCreate: updateTapped");
-            Intent intent = getIntent();
-            Bundle bundle = new Bundle();
-            bundle.putBoolean("updateTapped", intent.getBooleanExtra("updateTapped", false));
-            bundle.putString("filePath", intent.getStringExtra("filePath"));
-            UpdateFragment updateFragment = new UpdateFragment();
-            updateFragment.setArguments(bundle);
-            replaceFragment(updateFragment);
-        } else if (getIntent() != null && "true".equals(getIntent().getStringExtra("migratePrefs"))) {
-            Intent intent = getIntent();
-            Bundle bundle = new Bundle();
-            bundle.putString("migratePrefs", intent.getStringExtra("migratePrefs"));
-            UpdateFragment updateFragment = new UpdateFragment();
-            updateFragment.setArguments(bundle);
-            replaceFragment(updateFragment);
-        } else if (getIntent() != null && getIntent().getBooleanExtra("newUpdate", false)) {
-            replaceFragment(new UpdateFragment());
+        if (getIntent() != null) {
+            if (getIntent().getBooleanExtra("updateTapped", false)) {
+                Intent intent = getIntent();
+                Bundle bundle = new Bundle();
+                bundle.putBoolean("updateTapped", intent.getBooleanExtra("updateTapped", false));
+                bundle.putString("filePath", intent.getStringExtra("filePath"));
+                UpdateFragment updateFragment = new UpdateFragment();
+                updateFragment.setArguments(bundle);
+                replaceFragment(updateFragment);
+            } else if (getIntent().getBooleanExtra("newUpdate", false)) {
+                replaceFragment(new UpdateFragment());
+            } else if (getIntent().getBooleanExtra("openWeatherSettings", false)) {
+                replaceFragment(new Mods());
+                replaceFragment(new WeatherSettings());
+            }
         }
 
-        prefsList.add(new Object[]{R.xml.mods, R.string.mods_title, new Mods()});
-        prefsList.add(new Object[]{R.xml.statusbar, R.string.statusbar_title, new Statusbar()});
-        prefsList.add(new Object[]{R.xml.statusbar_clock, R.string.status_bar_clock_title, new Statusbar.Clock()});
-        prefsList.add(new Object[]{R.xml.statusbar_notifications, R.string.statusbar_notifications, new Statusbar.Notifications()});
-        prefsList.add(new Object[]{R.xml.battery_bar_settings, R.string.statusbar_batterybar_title, new Statusbar.BatteryBar()});
-        prefsList.add(new Object[]{R.xml.statusbar_battery_icon, R.string.statusbar_battery_icon_options, new Statusbar.BatteryIcon()});
-        prefsList.add(new Object[]{R.xml.quick_settings_mods, R.string.quick_settings_title, new QuickSettings()});
-        prefsList.add(new Object[]{R.xml.quick_settings_tiles_prefs, R.string.quick_settings_tiles_title, new QuickSettingsTiles()});
-        prefsList.add(new Object[]{R.xml.quick_settings_tiles_customizations_prefs, R.string.quick_settings_tiles_customization_title, new QuickSettingsCustomization()});
-        prefsList.add(new Object[]{R.xml.qs_header_image_prefs, R.string.qs_header_image_title, new QsHeaderImage()});
-        prefsList.add(new Object[]{R.xml.qs_header_clock_prefs, R.string.qs_header_clock, new QsHeaderClock()});
-        prefsList.add(new Object[]{R.xml.gesture_prefs, R.string.gesture_navigation_title, new Gesture()});
-        prefsList.add(new Object[]{R.xml.buttons_prefs, R.string.buttons_title, new Buttons()});
+        if (!prefsList.isEmpty()) prefsList.clear();
+        prefsList.add(new SearchPreferenceItem(R.xml.mods, R.string.mods_title, new Mods()));
+        prefsList.add(new SearchPreferenceItem(R.xml.statusbar, R.string.statusbar_title, new Statusbar()));
+        prefsList.add(new SearchPreferenceItem(R.xml.statusbar_clock, R.string.status_bar_clock_title, new Statusbar.Clock()));
+        prefsList.add(new SearchPreferenceItem(R.xml.statusbar_notifications, R.string.statusbar_notifications, new Statusbar.Notifications()));
+        prefsList.add(new SearchPreferenceItem(R.xml.battery_bar_settings, R.string.statusbar_batterybar_title, new Statusbar.BatteryBar()));
+        prefsList.add(new SearchPreferenceItem(R.xml.statusbar_battery_icon, R.string.statusbar_battery_icon_options, new Statusbar.BatteryIcon()));
+        prefsList.add(new SearchPreferenceItem(R.xml.statusbar_icons, R.string.statusbar_icons, new Statusbar.Icons()));
+        prefsList.add(new SearchPreferenceItem(R.xml.quick_settings_mods, R.string.quick_settings_title, new QuickSettings()));
+        prefsList.add(new SearchPreferenceItem(R.xml.quick_settings_tiles_prefs, R.string.quick_settings_tiles_title, new QuickSettingsTiles()));
+        prefsList.add(new SearchPreferenceItem(R.xml.quick_settings_tiles_customizations_prefs, R.string.quick_settings_tiles_customization_title, new QuickSettingsCustomization()));
+        prefsList.add(new SearchPreferenceItem(R.xml.qs_header_image_prefs, R.string.qs_header_image_title, new QsHeaderImage()));
+        prefsList.add(new SearchPreferenceItem(R.xml.qs_header_clock_prefs, R.string.qs_header_clock, new QsHeaderClock()));
+        prefsList.add(new SearchPreferenceItem(R.xml.gesture_prefs, R.string.gesture_navigation_title, new Gesture()));
+        prefsList.add(new SearchPreferenceItem(R.xml.buttons_prefs, R.string.buttons_title, new Buttons()));
         if (AppUtils.isAppInstalled(this, Constants.Packages.LAUNCHER))
-            prefsList.add(new Object[]{R.xml.launcher_mods, R.string.launcher_title, new Launcher()});
-        prefsList.add(new Object[]{R.xml.lockscreen_prefs, R.string.lockscreen_title, new Lockscreen()});
-        prefsList.add(new Object[]{R.xml.lockscreen_clock, R.string.lockscreen_clock, new Lockscreen.LockscreenClock()});
-        prefsList.add(new Object[]{R.xml.sound_mods, R.string.sound, new Mods.Sound()});
-        prefsList.add(new Object[]{R.xml.package_manager_prefs, R.string.package_manager, new Mods.PackageManager()});
-        prefsList.add(new Object[]{R.xml.misc_prefs, R.string.misc, new Mods.Misc()});
+            prefsList.add(new SearchPreferenceItem(R.xml.launcher_mods, R.string.launcher_title, new Launcher()));
+        prefsList.add(new SearchPreferenceItem(R.xml.lockscreen_prefs, R.string.lockscreen_title, new Lockscreen()));
+        prefsList.add(new SearchPreferenceItem(R.xml.lockscreen_clock, R.string.lockscreen_clock, new LockscreenClockFragment()));
+        prefsList.add(new SearchPreferenceItem(R.xml.lockscreen_weather_prefs, R.string.lockscreen_weather, new LockscreenWeather()));
+        prefsList.add(new SearchPreferenceItem(R.xml.aod_clock_prefs, R.string.aod_clock, new AodClock()));
+        prefsList.add(new SearchPreferenceItem(R.xml.aod_weather_prefs, R.string.aod_weather, new AodWeather()));
+        prefsList.add(new SearchPreferenceItem(R.xml.sound_mods, R.string.sound, new Mods.Sound()));
+        prefsList.add(new SearchPreferenceItem(R.xml.package_manager_prefs, R.string.package_manager, new Mods.PackageManager()));
+        prefsList.add(new SearchPreferenceItem(R.xml.misc_prefs, R.string.misc, new Mods.Misc()));
 
         PreferenceHelper.init(ExtendedSharedPreferences.from(getDefaultSharedPreferences(createDeviceProtectedStorageContext())));
 
@@ -142,57 +141,46 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         // Setup navigation
         setSupportActionBar(binding.toolbar);
         actionBar = getSupportActionBar();
-        setupNavigation();
         setupBottomNavigationView();
 
         colorPickerDialog = ColorPickerDialog.newBuilder();
-    }
 
-    private void setupNavigation() {
-        //navHostFragment = (NavHostFragment) getSupportFragmentManager().findFragmentById(R.id.fragmentContainerView);
-        if (navHostFragment == null) return;
-
-        NavController navController = navHostFragment.getNavController();
-        AppBarConfiguration appBarConfiguration =
-                new AppBarConfiguration.Builder(
-                        R.id.mods,
-                        R.id.updates,
-                        R.id.hooks,
-                        R.id.settings
-                ).build();
-
-        NavigationUI.setupWithNavController(
-                binding.toolbar, navController, appBarConfiguration);
-        navigationView = binding.bottomNavigationView;
-        binding.bottomNavigationView.setOnItemSelectedListener(item -> NavigationUI.onNavDestinationSelected(item, navController));
+        if (!AppUtils.hasStoragePermission()) {
+            AppUtils.requestStoragePermission(this);
+        }
+        File modDir = new File(Constants.XPOSED_RESOURCE_TEMP_DIR);
+        if (!modDir.exists()) {
+            Shell.cmd("mkdir -p " + Constants.XPOSED_RESOURCE_TEMP_DIR).exec();
+        }
 
     }
+
+
 
     @SuppressLint("NonConstantResourceId")
     private void setupBottomNavigationView() {
+        if (!OverlayUtil.overlayExists()) {
+            binding.bottomNavigationView.getMenu().clear();
+            binding.bottomNavigationView.inflateMenu(R.menu.bottom_nav_menu_xposed_only);
+        }
         getSupportFragmentManager().addOnBackStackChangedListener(() -> {
             String tag = getTopFragment();
 
-            if (Objects.equals(tag, Mods.class.getSimpleName())) {
-                selectedFragment = R.id.mods;
+            if (Objects.equals(tag, UserInterface.class.getSimpleName())) {
+                selectedFragment = R.id.ui;
                 binding.bottomNavigationView.getMenu().getItem(0).setChecked(true);
-                setHeader(this, getString(R.string.app_name));
-                backButtonDisabled();
+            } else if (Objects.equals(tag, Mods.class.getSimpleName())) {
+                selectedFragment = R.id.mods;
+                binding.bottomNavigationView.getMenu().getItem(!OverlayUtil.overlayExists() ? 0 : 1).setChecked(true);
             } else if (Objects.equals(tag, UpdateFragment.class.getSimpleName())) {
                 selectedFragment = R.id.updates;
-                binding.bottomNavigationView.getMenu().getItem(1).setChecked(true);
-                setHeader(this, getString(R.string.update));
-                backButtonDisabled();
+                binding.bottomNavigationView.getMenu().getItem(!OverlayUtil.overlayExists() ? 1 : 2).setChecked(true);
             } else if (Objects.equals(tag, Hooks.class.getSimpleName())) {
                 selectedFragment = R.id.hooks;
-                binding.bottomNavigationView.getMenu().getItem(2).setChecked(true);
-                setHeader(this, getString(R.string.hooked_packages_title));
-                backButtonDisabled();
+                binding.bottomNavigationView.getMenu().getItem(!OverlayUtil.overlayExists() ? 2 : 3).setChecked(true);
             } else if (Objects.equals(tag, Settings.class.getSimpleName())) {
                 selectedFragment = R.id.settings;
-                binding.bottomNavigationView.getMenu().getItem(3).setChecked(true);
-                setHeader(this, getString(R.string.navbar_settings));
-                backButtonDisabled();
+                binding.bottomNavigationView.getMenu().getItem(!OverlayUtil.overlayExists() ? 3 : 4).setChecked(true);
             }
         });
 
@@ -200,6 +188,13 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
             String tag = getTopFragment();
 
             switch (item.getItemId()) {
+                case R.id.ui -> {
+                    if (!Objects.equals(tag, UserInterface.class.getSimpleName())) {
+                        selectedFragment = R.id.ui;
+                        replaceFragment(new UserInterface());
+                    }
+                    return true;
+                }
                 case R.id.mods -> {
                     if (!Objects.equals(tag, Mods.class.getSimpleName())) {
                         selectedFragment = R.id.mods;
@@ -243,7 +238,9 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         if (last >= 0) {
             Fragment topFragment = getSupportFragmentManager().getFragments().get(last);
 
-            if (topFragment instanceof Mods)
+            if (topFragment instanceof UserInterface)
+                fragment[0] = UserInterface.class.getSimpleName();
+            else if (topFragment instanceof Mods)
                 fragment[0] = Mods.class.getSimpleName();
             else if (topFragment instanceof UpdateFragment)
                 fragment[0] = UpdateFragment.class.getSimpleName();
@@ -261,9 +258,12 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         FragmentTransaction fragmentTransaction = fragmentManager.beginTransaction();
         fragmentTransaction.setCustomAnimations(R.anim.fragment_fade_in, R.anim.fragment_fade_out, R.anim.fragment_fade_in, R.anim.fragment_fade_out);
         fragmentTransaction.replace(R.id.frame_layout, fragment, tag);
-        if (Objects.equals(tag, Mods.class.getSimpleName())) {
+        if (Objects.equals(tag, UserInterface.class.getSimpleName())) {
             fragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
-        } else if (Objects.equals(tag, Hooks.class.getSimpleName()) ||
+        } else if (Objects.equals(tag, Mods.class.getSimpleName()) && !OverlayUtil.overlayExists()) {
+            fragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
+        } else if (Objects.equals(tag, Mods.class.getSimpleName()) ||
+                Objects.equals(tag, Hooks.class.getSimpleName()) ||
                 Objects.equals(tag, Settings.class.getSimpleName())) {
             fragmentManager.popBackStack(null, FragmentManager.POP_BACK_STACK_INCLUSIVE);
             fragmentTransaction.addToBackStack(tag);
@@ -287,18 +287,6 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         return true;
     }
 
-    public void setHeader(Context context, int title) {
-        Toolbar toolbar = ((AppCompatActivity) context).findViewById(R.id.toolbar);
-        ((AppCompatActivity) context).setSupportActionBar(toolbar);
-        toolbar.setTitle(title);
-    }
-
-    public void setHeader(Context context, CharSequence title) {
-        Toolbar toolbar = ((AppCompatActivity) context).findViewById(R.id.toolbar);
-        ((AppCompatActivity) context).setSupportActionBar(toolbar);
-        toolbar.setTitle(title);
-    }
-
     public static void backButtonEnabled() {
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(true);
@@ -310,18 +298,6 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         if (actionBar != null) {
             actionBar.setDisplayHomeAsUpEnabled(false);
             actionBar.setDisplayShowHomeEnabled(false);
-        }
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-        if (Objects.equals(getTopFragment(), Mods.class.getSimpleName()) ||
-                Objects.equals(getTopFragment(), Hooks.class.getSimpleName()) ||
-                Objects.equals(getTopFragment(), Settings.class.getSimpleName())) {
-            backButtonDisabled();
-        } else {
-            backButtonEnabled();
         }
     }
 
@@ -355,7 +331,6 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
                 .setShowAlphaSlider(showAlphaSlider)
                 .setShowColorShades(showColorShades);
         colorPickerDialog.show(this);
-        Log.d("ColorPickerDialog", "showColorPickerDialog: " + dialogId);
     }
 
     @Override
@@ -381,26 +356,6 @@ public class MainActivity extends AppCompatActivity implements PreferenceFragmen
         NotificationChannel channel = new NotificationChannel(UPDATES_CHANNEL_ID, name, importance);
         NotificationManager notificationManager = getSystemService(NotificationManager.class);
         notificationManager.createNotificationChannel(channel);
-    }
-
-
-    private void tryMigratePrefs() {
-        String migrateFileName = "OC_migrate.tmp";
-        @SuppressLint("SdCardPath")
-        String migrateFilePath = "/sdcard/" + migrateFileName;
-        if (Shell.cmd(String.format("stat %s", migrateFilePath)).exec().getOut().size() > 0) {
-            String OCPrefsPath = "/data/user_de/0/it.dhd.oxygencustomizer/shared_prefs/it.dhd.oxygencustomizer_preferences.xml";
-            Shell.cmd(String.format("mv %s %s", migrateFilePath, OCPrefsPath)).exec();
-            Shell.cmd(String.format("chmod 777 %s", OCPrefsPath)).exec(); //system will correct the permissions upon next launch. let's just give it access to do so
-
-            new MaterialAlertDialogBuilder(this, R.style.MaterialComponents_MaterialAlertDialog)
-                    .setTitle(R.string.app_kill_alert_title)
-                    .setMessage(R.string.reboot_alert_body)
-                    .setPositiveButton(R.string.reboot_word, (dialog, which) -> AppUtils.restartScope("system"))
-                    .setCancelable(false)
-                    .show();
-        }
-
     }
 
 }

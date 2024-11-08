@@ -35,6 +35,9 @@ public class PulseControllerImpl {
     private static final String TAG = PulseControllerImpl.class.getSimpleName();
     private static final int RENDER_STYLE_LEGACY = 0;
     private static final int RENDER_STYLE_CM = 1;
+    private static final int RENDER_STYLE_LINE = 2;
+    private static final int RENDER_STYLE_CIRCLE = 3;
+    private static final int RENDER_STYLE_CIRCLE_BAR = 4;
 
     private final Context mContext;
     private static AudioManager mAudioManager;
@@ -65,8 +68,6 @@ public class PulseControllerImpl {
     private boolean mKeyguardGoingAway;
     private FrameLayout mNavBar = null;
     private FrameLayout mAodRootLayout = null;
-    private FrameLayout mNotificationShadeView;
-    private FrameLayout mKeyguardLayout = null;
     private Executor mBgHandler = command -> new Handler(Looper.getMainLooper()).post(command);
 
     private final BroadcastReceiver mBroadcastReceiver = new BroadcastReceiver() {
@@ -181,26 +182,6 @@ public class PulseControllerImpl {
         boolean allowNavPulse = vv != null && vv.isAttached()
                 && mNavPulseEnabled && !mKeyguardShowing && !mDozing;
 
-        /*if (mKeyguardGoingAway) {
-            detachPulseFrom(vv, allowNavPulse /*keep linked*//*);
-        } else if (allowNavPulse) {
-            detachPulseFrom(vv, allowNavPulse /*keep linked*//*);
-            attachPulseTo(mNavBar);
-        } else if (allowLsPulse) {
-            detachPulseFrom(mNavBar, allowLsPulse /*keep linked*//*);
-            if (mAmbPulseEnabled) detachPulseFrom(mAodRootLayout, allowLsPulse /*keep linked*//*);
-            attachPulseTo(vv);
-        } else if (allowAmbPulse) {
-            detachPulseFrom(mNavBar, allowAmbPulse /*keep linked*//*);
-            if (mLsPulseEnabled) detachPulseFrom(vv, allowAmbPulse /*keep linked*//*);
-            attachPulseTo(mAodRootLayout);
-        } else {
-            detachPulseFrom(mNavBar, false /*keep linked*//*);
-            detachPulseFrom(mAodRootLayout, false /*keep linked*//*);
-            detachPulseFrom(mKeyguardLayout, false /*keep linked*//*);
-            detachPulseFrom(vv, false /*keep linked*//*);
-        }*/
-
         if (mKeyguardGoingAway) {
             detachPulseFrom(vv, allowNavPulse /*keep linked*/);
         } else if (allowNavPulse) {
@@ -217,7 +198,6 @@ public class PulseControllerImpl {
         } else {
             detachPulseFrom(mNavBar, false /*keep linked*/);
             detachPulseFrom(mAodRootLayout, false /*keep linked*/);
-            //detachPulseFrom(mKeyguardLayout, false /*keep linked*/);
             detachPulseFrom(vv, false /*keep linked*/);
         }
     }
@@ -271,14 +251,6 @@ public class PulseControllerImpl {
 
     public void setAodRootLayout(FrameLayout aodRootLayout) {
         mAodRootLayout = aodRootLayout;
-    }
-
-    public void setStatusbar(FrameLayout notificationShadeView) {
-        mNotificationShadeView = notificationShadeView;
-    }
-
-    public void setKeyguardLayout(FrameLayout keyguardLayout) {
-        mKeyguardLayout = keyguardLayout;
     }
 
     public static boolean hasInstance() {
@@ -370,11 +342,14 @@ public class PulseControllerImpl {
     }
 
     private Renderer getRenderer() {
-        if (mPulseStyle == RENDER_STYLE_CM) {
-            return new SolidLineRenderer(mContext, mHandler, mPulseView, instance, mColorController);
-        } else {
-            return new FadingBlockRenderer(mContext, mHandler, mPulseView, instance, mColorController);
-        }
+        return switch (mPulseStyle) {
+            case RENDER_STYLE_CM ->
+                    new SolidLineRenderer(mContext, mHandler, mPulseView, instance, mColorController);
+            case RENDER_STYLE_LINE ->
+                    new LineRenderer(mContext, mHandler, mPulseView, instance, mColorController);
+            default ->
+                    new FadingBlockRenderer(mContext, mHandler, mPulseView, instance, mColorController);
+        };
     }
 
     private boolean isMusicMuted(int streamType) {
@@ -495,20 +470,6 @@ public class PulseControllerImpl {
         }
         log("doLinkVisualizer() done " + mLinked);
     }
-
-    /*@Override
-    public void onPrimaryMetadataOrStateChanged(MediaMetadata metadata, @PlaybackState.State int state) {
-        boolean isPlaying = state == PlaybackState.STATE_PLAYING;
-        if (mIsMediaPlaying != isPlaying) {
-            mIsMediaPlaying = isPlaying;
-            doLinkage();
-        }
-    }
-
-    @Override
-    public void setMediaNotificationColor(int color) {
-        mColorController.setMediaNotificationColor(color);
-    }*/
 
     @Override
     public String toString() {

@@ -10,13 +10,15 @@ import org.json.JSONObject;
 
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.HashMap;
 import java.util.Locale;
-
 import java.util.TimeZone;
 
+import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.weather.AbstractWeatherProvider;
 import it.dhd.oxygencustomizer.weather.WeatherInfo;
 import it.dhd.oxygencustomizer.weather.WeatherInfo.DayForecast;
@@ -25,7 +27,7 @@ public class METNorwayProvider extends AbstractWeatherProvider {
     private static final String TAG = "METNorwayProvider";
 
     private static final String URL_WEATHER =
-            "https://api.met.no/weatherapi/locationforecast/2.0/?";
+            "https://api.met.no/weatherapi/locationforecast/2.0/compact?";
 
     private static final SimpleDateFormat gmt0Format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
     private static final SimpleDateFormat userTimeZoneFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
@@ -40,26 +42,26 @@ public class METNorwayProvider extends AbstractWeatherProvider {
         return getAllWeather(coordinates, metric);
     }
 
-    public WeatherInfo getCustomWeather(String id, boolean metric) {
-        return getAllWeather(id, metric);
+    public WeatherInfo getCustomWeather(String lat, String lon, boolean metric) {
+        String coordinates = String.format(Locale.US, PART_COORDINATES, Float.valueOf(lat), Float.valueOf(lon));
+        return getAllWeather(coordinates, metric);
     }
 
     private WeatherInfo getAllWeather(String coordinates, boolean metric) {
         String url = URL_WEATHER + coordinates;
-        String response = retrieve(url);
+        String response = retrieve(url, new String[]{"User-Agent", "OxygenCustomizer/" + BuildConfig.VERSION_NAME + "-" + BuildConfig.VERSION_CODE});
         if (response == null) {
             return null;
         }
         log(TAG, "URL = " + url + " returning a response of " + response);
+        Log.w(TAG, "Response: " + response);
 
         try {
             JSONArray timeseries = new JSONObject(response).getJSONObject("properties").getJSONArray("timeseries");
             JSONObject weather = timeseries.getJSONObject(0).getJSONObject("data").getJSONObject("instant").getJSONObject("details");
 
             String symbolCode = timeseries.getJSONObject(0).getJSONObject("data").getJSONObject("next_1_hours").getJSONObject("summary").getString("symbol_code");
-            //Log.d("getAllWeather: symbolCode:", symbolCode);
             String conditionDescription = getWeatherCondition(symbolCode);
-            //Log.d("getAllWeather: conditionDescription:", conditionDescription);
             int weatherCode = arrayWeatherIconToCode[getPriorityCondition(symbolCode)];
 
             // Check Available Night Icon
@@ -68,6 +70,7 @@ public class METNorwayProvider extends AbstractWeatherProvider {
             }
 
             String city = getWeatherDataLocality(coordinates);
+            ArrayList<WeatherInfo.HourForecast> hourlyForecasts = new ArrayList<>();
 
             WeatherInfo w = new WeatherInfo(mContext,
                     /* id */ coordinates,
@@ -79,6 +82,7 @@ public class METNorwayProvider extends AbstractWeatherProvider {
                     /* wind */ convertWindSpeed(weather.getDouble("wind_speed"), metric),
                     /* windDir */ (int) weather.getDouble("wind_from_direction"),
                     metric,
+                    parseHourlyForecasts(timeseries, metric),
                     parseForecasts(timeseries, metric),
                     System.currentTimeMillis());
 
@@ -182,7 +186,6 @@ public class METNorwayProvider extends AbstractWeatherProvider {
                 }
 
                 String formattedConditionDescription = getWeatherCondition(conditionDescription);
-                //Log.d("DayForecast: formattedConditionDescription:", formattedConditionDescription);
 
                 item = new DayForecast(
                         /* low */ convertTemperature(temp_min, metric),
@@ -219,6 +222,51 @@ public class METNorwayProvider extends AbstractWeatherProvider {
         }
 
         return result;
+    }
+
+    private ArrayList<WeatherInfo.HourForecast> parseHourlyForecasts(JSONArray timeseries, boolean metric) throws JSONException {
+        ArrayList<WeatherInfo.HourForecast> result = new ArrayList<>(10);
+
+        int count = timeseries.length();
+        if (count == 0) {
+            throw new JSONException("Empty forecasts array");
+        }
+
+        LocalDateTime now = LocalDateTime.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ISO_DATE_TIME;
+
+        for (int i = 0; i < count; i++) {
+            JSONObject item = timeseries.getJSONObject(i);
+            String timeString = item.getString("time");
+            LocalDateTime time = LocalDateTime.parse(timeString, formatter);
+
+            JSONObject data = item.getJSONObject("data");
+            JSONObject next1Hours = data.optJSONObject("next_1_hours");
+
+            if (next1Hours != null) {
+                if (time.isAfter(now)) {
+                    JSONObject instant = data.getJSONObject("instant").getJSONObject("details");
+                    double temperature = instant.getDouble("air_temperature");
+                    String symbolCode = next1Hours.getJSONObject("summary").getString("symbol_code");
+                    String formattedConditionDescription = getWeatherCondition(symbolCode);
+
+                    WeatherInfo.HourForecast hour = new WeatherInfo.HourForecast(
+                            /* temp */ convertTemperature(temperature, metric),
+                            /* condition */ formattedConditionDescription,
+                            /* conditionCode */ arrayWeatherIconToCode[getPriorityCondition(symbolCode)],
+                            /* date */ timeString,
+                            metric);
+
+                    result.add(hour);
+
+                    if (result.size() >= 10) {
+                        break;
+                    }
+                }
+            }
+        }
+        return result;
+
     }
 
     private static final HashMap<String, String> WEATHER_CONDITION_MAPPING = new HashMap<>();

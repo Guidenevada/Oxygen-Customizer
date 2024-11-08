@@ -1,16 +1,26 @@
 package it.dhd.oxygencustomizer.xposed.hooks.systemui.statusbar;
 
 import static de.robv.android.xposed.XposedBridge.hookAllMethods;
-import static de.robv.android.xposed.XposedBridge.log;
-import static de.robv.android.xposed.XposedHelpers.callMethod;
 import static de.robv.android.xposed.XposedHelpers.findClass;
-import static de.robv.android.xposed.XposedHelpers.getIntField;
-import static de.robv.android.xposed.XposedHelpers.getObjectField;
-import static de.robv.android.xposed.XposedHelpers.setObjectField;
-import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.*;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_ALPHA;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_BOTTOM_FADE;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_ENABLED;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_HEIGHT_PORTRAIT;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_LANDSCAPE_ENABLED;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_PADDING_SIDE;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_PADDING_TOP;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_TINT;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_TINT_CUSTOM;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_TINT_INTENSITY;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_VALUE;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_HEADER_IMAGE_ZOOM_TO_FIT;
+import static it.dhd.oxygencustomizer.utils.Constants.Preferences.QsHeaderImage.QS_PREFS;
 import static it.dhd.oxygencustomizer.xposed.XPrefs.Xprefs;
 import static it.dhd.oxygencustomizer.xposed.hooks.systemui.OpUtils.getPrimaryColor;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.Configuration;
@@ -21,18 +31,13 @@ import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.AnimatedImageDrawable;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.os.Environment;
-import android.os.Handler;
-import android.os.Looper;
 import android.util.TypedValue;
-import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
-import android.widget.RelativeLayout;
 
 import androidx.core.content.res.ResourcesCompat;
 import androidx.core.graphics.ColorUtils;
@@ -46,12 +51,14 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import de.robv.android.xposed.XC_MethodHook;
+import de.robv.android.xposed.XposedBridge;
 import de.robv.android.xposed.callbacks.XC_LoadPackage;
 import it.dhd.oxygencustomizer.BuildConfig;
 import it.dhd.oxygencustomizer.utils.Constants;
 import it.dhd.oxygencustomizer.xposed.ResourceManager;
 import it.dhd.oxygencustomizer.xposed.XposedMods;
 import it.dhd.oxygencustomizer.xposed.hooks.systemui.SettingsLibUtilsProvider;
+import it.dhd.oxygencustomizer.xposed.utils.ReflectionTools;
 
 public class HeaderImage extends XposedMods {
 
@@ -59,7 +66,7 @@ public class HeaderImage extends XposedMods {
     private final String TAG = "Oxygen Customizer " + this.getClass().getSimpleName() + ": ";
 
     private final int MAX_TINT_OPACITY = 250;
-
+    ValueAnimator alphaAnimator;
     // QS Header Image
     private FadingEdgeLayout mQsHeaderLayout = null;
     private ImageView mQsHeaderImageView = null;
@@ -73,14 +80,18 @@ public class HeaderImage extends XposedMods {
     private int qshiTintCustom;
     private int qshiPaddingSide;
     private int qshiPaddingTop;
-    private int qshiMinHeight = 50;
-    private int qshiDefaultHeight = 200;
+    private final int qshiMinHeight = 50;
+    private final int qshiDefaultHeight = 200;
     private int qshiTintIntensity = 50;
-
     private int mColorAccent;
     private int mColorTextPrimary;
     private int mColorTextPrimaryInverse;
     private int bottomFadeAmount = 0;
+    private boolean newControlCenter = false;
+    private boolean isFirstExpansionIgnored = true;
+    private boolean isResetNeeded = false;
+    private final boolean ignore = true;
+    private boolean isLandscape = false;
 
     public HeaderImage(Context context) {
         super(context);
@@ -119,6 +130,13 @@ public class HeaderImage extends XposedMods {
 
     @Override
     public void handleLoadPackage(XC_LoadPackage.LoadPackageParam lpparam) throws Throwable {
+        Class<?> NewBrightnessSlider;
+        try {
+            NewBrightnessSlider = findClass("com.oplus.systemui.qs.widget.OplusQsToggleSliderLayout", lpparam.classLoader);
+            newControlCenter = true;
+            log("New Control Center");
+        } catch (Throwable ignored) {
+        }
 
         Class<?> OplusQSContainerImpl;
         try {
@@ -126,17 +144,14 @@ public class HeaderImage extends XposedMods {
         } catch (Throwable t) {
             OplusQSContainerImpl = findClass("com.oplusos.systemui.qs.OplusQSContainerImpl", lpparam.classLoader); // OOS 13
         }
-        Class<?> QuickStatusBarHeader = null;
-        try {
-           QuickStatusBarHeader = findClass("com.oplus.systemui.qs.OplusQuickStatusBarHeader", lpparam.classLoader);;
-        } catch (Throwable ignored){}
 
         try {
-            log(TAG + "Hooking");
+            log("Hooking");
             hookAllMethods(OplusQSContainerImpl, "onFinishInflate", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
-                    log(TAG + "onFinishInflate");
+                    log("onFinishInflate");
+
                     FrameLayout mQuickStatusBarHeader = (FrameLayout) param.thisObject;
 
                     mQsHeaderLayout = new FadingEdgeLayout(mContext);
@@ -159,6 +174,14 @@ public class HeaderImage extends XposedMods {
                 }
             });
 
+            hookAllMethods(OplusQSContainerImpl, "onConfigurationChanged", new XC_MethodHook() {
+                @Override
+                protected void afterHookedMethod(MethodHookParam param) {
+                    Configuration config = (Configuration) param.args[0];
+                    isLandscape = config.orientation == Configuration.ORIENTATION_LANDSCAPE;
+                }
+            });
+
             hookAllMethods(OplusQSContainerImpl, "updateResources", new XC_MethodHook() {
                 @Override
                 protected void afterHookedMethod(MethodHookParam param) {
@@ -166,24 +189,126 @@ public class HeaderImage extends XposedMods {
                 }
             });
 
-        } catch (Throwable ignored) {}
+        } catch (Throwable ignored) {
+        }
 
-        try {
-            if (QuickStatusBarHeader != null) {
-                hookAllMethods(QuickStatusBarHeader, "onMeasure", new XC_MethodHook() {
+        if (newControlCenter) {
+            try {
+
+                /*Class<?> NotificationsQuickSettingsContainer = findClass("com.android.systemui.shade.NotificationsQuickSettingsContainer", lpparam.classLoader);
+                hookAllMethods(NotificationsQuickSettingsContainer,
+                        "applyBackScaling",
+                        new XC_MethodHook() {
                     @Override
-                    protected void afterHookedMethod(MethodHookParam param) {
-                        View mDatePrivacyView = (View) getObjectField(param.thisObject, "mPrivacyContainer");
-                        int mTopViewMeasureHeight = getIntField(param.thisObject, "mTopViewMeasureHeight");
-
-                        if ((int) callMethod(mDatePrivacyView, "getMeasuredHeight") != mTopViewMeasureHeight) {
-                            setObjectField(param.thisObject, "mTopViewMeasureHeight", callMethod(mDatePrivacyView, "getMeasuredHeight"));
-                            callMethod(param.thisObject, "updateAnimators");
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        if (param.args[0] instanceof Float) {
+                            float f = (float) param.args[0];
+                            log("applyBackScaling: " + f);
                         }
                     }
                 });
+
+                Class<?> NotificationStackScrollLayout = findClass("com.android.systemui.statusbar.notification.stack.NotificationStackScrollLayout", lpparam.classLoader);
+                hookAllMethods(NotificationStackScrollLayout,
+                        "setFractionToShade",
+                        new XC_MethodHook() {
+                    @Override
+                    protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                        if (param.args[0] instanceof Float) {
+                            float height = (float) param.args[0];
+                            log("setFractionToShade: " + height);
+                        }
+                    }
+                });*/
+
+
+                Class<?> NotificationPanelViewControllerExImp = findClass("com.oplus.systemui.shade.NotificationPanelViewControllerExImp", lpparam.classLoader);
+
+                hookAllMethods(NotificationPanelViewControllerExImp, "canScaleFadePanelAtExpandFraction",
+                        new XC_MethodHook() {
+                            @Override
+                            protected void afterHookedMethod(MethodHookParam param) throws Throwable {
+                                if (!qshiEnabled || mQsHeaderLayout == null) return;
+                                if (isLandscape && !qshiLandscapeEnabled) return;
+                                if (param.args[0] instanceof Float) {
+                                    float expansion = (float) param.args[0];
+                                    //log("canScaleFadePanelAtExpandFraction: " + expansion);
+
+                                    if (isFirstExpansionIgnored) {
+                                        //log("Ignoring first expansion");
+                                        if (expansion >= 0.9f) {
+                                            //log("First expansion ignored f>=0.9");
+                                            isFirstExpansionIgnored = false;
+                                            isResetNeeded = true;
+                                        }
+                                        if (expansion >= .20f) {
+                                            mQsHeaderLayout.setAlpha(1f);
+                                            mQsHeaderLayout.setVisibility(View.VISIBLE);
+                                        }
+                                        return;
+                                    }
+
+                                    if (expansion <= .2f) {
+                                        //log("Resetting");
+                                        isFirstExpansionIgnored = true;
+                                        isResetNeeded = false;
+                                    }
+
+                                    if (mQsHeaderLayout != null) {
+                                        if (expansion <= .900f) {
+                                            mQsHeaderLayout.animate()
+                                                    .alpha(0f)
+                                                    .setDuration(750)
+                                                    .setListener(new AnimatorListenerAdapter() {
+                                                        @Override
+                                                        public void onAnimationEnd(Animator animation) {
+                                                            mQsHeaderLayout.setVisibility(View.GONE);
+                                                        }
+                                                    });
+                                        } else {
+                                            mQsHeaderLayout.animate()
+                                                    .alpha(1f)
+                                                    .setDuration(150)
+                                                    .setListener(new AnimatorListenerAdapter() {
+                                                        @Override
+                                                        public void onAnimationEnd(Animator animation) {
+                                                            mQsHeaderLayout.setVisibility(View.VISIBLE);
+                                                        }
+                                                    });
+                                        }
+                                    }
+                                }
+                            }
+                        });
+
+                /*final Class<?> ScrimControllerClass = findClass(SYSTEM_UI + ".statusbar.phone.ScrimController", lpparam.classLoader);
+
+                hookAllMethods(ScrimControllerClass, "updateScrimColor", new XC_MethodHook() {
+                    protected void beforeHookedMethod(MethodHookParam param) throws Throwable {
+                        if(!qshiEnabled) return;
+                        if (mQsHeaderLayout == null) return;
+
+                        int alphaIndex = param.args[2] instanceof Float ? 2 : 1;
+                        if (findField(ScrimControllerClass, "mScrimBehind").get(param.thisObject).equals(param.args[0])) {
+                            float qsAlpha = (float) param.args[alphaIndex];
+                            boolean nightMode = (mQsHeaderLayout.getContext().getResources().getConfiguration().uiMode
+                                    & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+                            if (nightMode && qsAlpha < .18f // Dark Mode Alpha
+                                    || !nightMode && qsAlpha < 0.09f // Light Mode Different Alpha
+                                ) {
+                                mQsHeaderLayout.setAlpha(0f);
+                            } else {
+                                mQsHeaderLayout.setAlpha(1f);
+                            }
+                        }
+                    }
+                });*/
+
+            } catch (Throwable t) {
+                log("Error hooking new Control Center " + t.getMessage());
             }
-        } catch (Throwable ignored) {}
+        }
+
     }
 
     @Override
@@ -235,27 +360,6 @@ public class HeaderImage extends XposedMods {
 
     }
 
-    private void addOrRemoveProperty(View view, int property, boolean flag) {
-        Object vParam = view.getLayoutParams();
-        if (vParam instanceof RelativeLayout.LayoutParams) {
-            RelativeLayout.LayoutParams layoutParams = (RelativeLayout.LayoutParams) vParam;
-            if (flag) {
-                layoutParams.addRule(property);
-            } else {
-                layoutParams.removeRule(property);
-            }
-            view.setLayoutParams(layoutParams);
-        } else if (vParam instanceof LinearLayout.LayoutParams) {
-            LinearLayout.LayoutParams layoutParams = (LinearLayout.LayoutParams) vParam;
-            if (flag) {
-                layoutParams.gravity = property;
-            } else {
-                layoutParams.gravity = Gravity.NO_GRAVITY;
-            }
-            view.setLayoutParams(layoutParams);
-        }
-    }
-
     private void loadImageOrGif(ImageView iv) {
         AtomicBoolean applyTint = new AtomicBoolean(false);
         int tintColor;
@@ -275,16 +379,16 @@ public class HeaderImage extends XposedMods {
             tintColor = -1;
         }
         if (qshiValue != -1) {
-            @SuppressLint("DiscouragedApi") int resId = ResourceManager.modRes.getIdentifier("qs_header_image_" + qshiValue,"drawable", BuildConfig.APPLICATION_ID);
+            @SuppressLint("DiscouragedApi") int resId = ResourceManager.modRes.getIdentifier("qs_header_image_" + qshiValue, "drawable", BuildConfig.APPLICATION_ID);
             Drawable drw = ResourcesCompat.getDrawable(ResourceManager.modRes,
                     resId,
                     mContext.getTheme());
-            iv.post(()->loadImageMain(iv, drw));
+            iv.post(() -> loadImageMain(iv, drw));
             applyTint.set(true);
         } else {
             try {
                 ScheduledExecutorService executor = Executors.newScheduledThreadPool(1);
-                executor.scheduleAtFixedRate(() -> {
+                executor.scheduleWithFixedDelay(() -> {
                     File Android = new File(Environment.getExternalStorageDirectory() + "/Android");
 
                     if (Android.isDirectory()) {
@@ -308,7 +412,8 @@ public class HeaderImage extends XposedMods {
                             } else {
                                 applyTint.set(true);
                             }
-                        } catch (Throwable ignored) {}
+                        } catch (Throwable ignored) {
+                        }
 
                         executor.shutdown();
                         executor.shutdownNow();
@@ -354,8 +459,7 @@ public class HeaderImage extends XposedMods {
         if (alpha > MAX_TINT_OPACITY) {
             alpha = MAX_TINT_OPACITY;
             return Color.argb(alpha, red, green, blue);
-        }
-        else {
+        } else {
             return customTint;
         }
     }

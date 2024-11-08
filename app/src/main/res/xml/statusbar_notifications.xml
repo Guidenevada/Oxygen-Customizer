@@ -1,67 +1,128 @@
 <?xml version="1.0" encoding="utf-8"?>
-<PreferenceScreen
-    xmlns:android="http://schemas.android.com/apk/res/android"
-    xmlns:app="http://schemas.android.com/apk/res-auto"
-    xmlns:search="http://schemas.android.com/apk/it.dhd.oxygencustomizer.customprefs.preferencesearch">
-    <it.dhd.oxygencustomizer.customprefs.IllustrationPreference
+<PreferenceScreen xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto">
+    <it.dhd.oxygencustomizer.ui.preferences.IllustrationPreference
         android:key="sb_illustration"
         app:lottie_rawRes="@raw/notification_illustration" />
 
-<PreferenceCategory
-    app:iconSpaceReserved="false"
-    android:title="@string/statusbar_notifications_cat">
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/statusbar_notifications_cat"
+        app:iconSpaceReserved="false">
 
-    <SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="statusbar_notification_app_icon"
-        android:title="@string/statusbar_use_app_icon"
-        android:summaryOn="@string/general_on"
-        android:summaryOff="@string/general_off"
-        app:iconSpaceReserved="false"/>
-    <it.dhd.oxygencustomizer.customprefs.FooterPreference
-        android:title="@string/requires_sysui_restart"
-        android:selectable="false"/>
-</PreferenceCategory>
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:defaultValue="false"
+            android:key="statusbar_notification_app_icon"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/statusbar_use_app_icon"
+            app:forcePosition="full"
+            app:iconSpaceReserved="false" />
 
-    <!--<SwitchPreferenceCompat
-        android:defaultValue="false"
-        android:key="statusbar_notification_count"
-        android:title="@string/statusbar_notification_count"
-        app:iconSpaceReserved="false"/> -->
+        <it.dhd.oxygencustomizer.ui.preferences.FooterPreference
+            android:selectable="false"
+            android:title="@string/requires_sysui_restart" />
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
 
-    <PreferenceCategory
-        app:iconSpaceReserved="false"
-        android:title="@string/statusbar_notifications_related">
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/statusbar_notifications_transparency"
+        app:iconSpaceReserved="false">
 
-        <SwitchPreferenceCompat
-            app:iconSpaceReserved="false"
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:defaultValue="false"
+            android:key="statusbar_notification_transparency"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/statusbar_notification_transparency"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oneplusui.preference.OplusSliderPreference
+            android:key="statusbar_notification_transparency_value"
+            android:title="@string/statusbar_notification_transparency_value"
+            app:defaultValue="25"
+            app:maxVal="255"
+            app:minVal="0"
+            app:valueFormat="dp" />
+
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
+
+    <it.dhd.oneplusui.preference.OplusPreferenceCategory
+        android:title="@string/statusbar_notifications_related"
+        app:iconSpaceReserved="false">
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:key="remove_charging_complete_notification"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
             android:title="@string/remove_charging_complete_notification_title"
-            android:summaryOn="@string/general_on"
-            android:summaryOff="@string/general_off" />
+            app:iconSpaceReserved="false" />
 
-        <SwitchPreferenceCompat
-            app:iconSpaceReserved="false"
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:key="remove_dev_mode"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
             android:title="@string/remove_dev_mode_notification"
-            android:summaryOn="@string/general_on"
-            android:summaryOff="@string/general_off" />
+            app:iconSpaceReserved="false" />
 
-        <SwitchPreferenceCompat
-            app:iconSpaceReserved="false"
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:key="remove_flashlight_notification"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
             android:title="@string/remove_flashlight_notification"
-            android:summaryOn="@string/general_on"
-            android:summaryOff="@string/general_off" />
+            app:iconSpaceReserved="false" />
 
-        <SwitchPreferenceCompat
-            app:iconSpaceReserved="false"
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
             android:key="remove_low_battery_notification"
-            android:title="@string/remove_low_battery_notification"
+            android:summaryOff="@string/general_off"
             android:summaryOn="@string/general_on"
-            android:summaryOff="@string/general_off" />
+            android:title="@string/remove_low_battery_notification"
+            app:iconSpaceReserved="false" />
 
+        <it.dhd.oneplusui.preference.OplusMenuPreference
+            android:defaultValue="0"
+            android:entries="@array/notif_default_expansion_entries"
+            android:entryValues="@array/notif_default_expansion_values"
+            android:key="notificationDefaultExpansion"
+            android:summary="%s"
+            android:title="@string/notif_default_expansion_title"
+            app:iconSpaceReserved="false" />
+    </it.dhd.oneplusui.preference.OplusPreferenceCategory>
 
+    <PreferenceCategory>
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:key="customizeClearButton"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/customize_clear_all_button"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:key="linkBackgroundAccent"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/clear_all_link_bg_accent"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oxygencustomizer.ui.preferences.OplusColorPreference
+            android:defaultValue="0xff8c8c8c"
+            android:key="clearButtonBgColor"
+            android:title="@string/clear_all_bg_color"
+            app:cpv_showAlphaSlider="true"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oneplusui.preference.OplusSwitchPreference
+            android:key="linkIconAccent"
+            android:summaryOff="@string/general_off"
+            android:summaryOn="@string/general_on"
+            android:title="@string/clear_all_link_bg_icon_accent"
+            app:iconSpaceReserved="false" />
+
+        <it.dhd.oxygencustomizer.ui.preferences.OplusColorPreference
+            android:defaultValue="0xffffffff"
+            android:key="clearButtonIconColor"
+            android:title="@string/clear_all_icon_color"
+            app:cpv_showAlphaSlider="true"
+            app:iconSpaceReserved="false" />
     </PreferenceCategory>
 
 </PreferenceScreen>

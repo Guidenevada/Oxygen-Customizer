@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Bitmap.Config;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.Paint;
@@ -114,6 +115,21 @@ public class DrawableConverter {
         return grayscaleBitmap;
     }
 
+    public static Bitmap getColoredBitmap(Drawable d, int color, int intensity) {
+        if (d == null) {
+            return null;
+        }
+        Bitmap colorBitmap = ((BitmapDrawable) d).getBitmap();
+        Bitmap filteredBitmap = Bitmap.createBitmap(colorBitmap.getWidth(), colorBitmap.getHeight(), colorBitmap.getConfig());
+        Canvas canvas = new Canvas(filteredBitmap);
+        Paint paint = new Paint();
+        int fadeFilter = ColorUtils.blendARGB(Color.TRANSPARENT, color, intensity / 100f);
+        paint.setColorFilter(new PorterDuffColorFilter(fadeFilter, PorterDuff.Mode.SRC_ATOP));
+
+        canvas.drawBitmap(colorBitmap, 0, 0, paint);
+        return filteredBitmap;
+    }
+
     public static Bitmap toGrayscale(Bitmap bmpOriginal) {
         int width, height;
         height = bmpOriginal.getHeight();
@@ -158,11 +174,7 @@ public class DrawableConverter {
     }
 
     public static Bitmap getGrayscaleBlurredImage(Context context, Bitmap image, float radius) {
-        Bitmap finalImage = Bitmap.createBitmap(
-                image.getWidth(), image.getHeight(),
-                Bitmap.Config.ARGB_8888);
-        finalImage = toGrayscale(getBlurredImage(context, image, radius));
-        return finalImage;
+        return toGrayscale(getBlurredImage(context, image, radius));
     }
 
     public static Bitmap getBlurredImage(Context context, Bitmap image) {
@@ -272,14 +284,14 @@ public class DrawableConverter {
         return ColorUtils.LABToColor(low, a, b);
     }
 
-    public static BitmapDrawable scaleDrawable(Context context, Drawable drawable, float scale) {
+    public static Drawable scaleDrawable(Context context, Drawable drawable, float scale) {
         int width = drawable.getIntrinsicWidth();
         int height = drawable.getIntrinsicHeight();
         int newWidth = (int) (width * scale);
         int newHeight = (int) (height * scale);
         Bitmap scaledBitmap = Bitmap.createBitmap(newWidth, newHeight, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(scaledBitmap);
-        drawable.setBounds(0, 0, canvas.getWidth(), canvas.getHeight());
+        drawable.setBounds(0, 0, newWidth, newHeight);
         drawable.draw(canvas);
         return new BitmapDrawable(context.getResources(), scaledBitmap);
     }

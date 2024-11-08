@@ -1,9 +1,12 @@
 package it.dhd.oxygencustomizer.xposed.batterystyles
 
 import android.content.Context
+import android.content.res.Resources
 import android.content.res.TypedArray
 import android.graphics.Color
 import android.graphics.drawable.Drawable
+import it.dhd.oxygencustomizer.xposed.ResourceManager.modRes
+import it.dhd.oxygencustomizer.xposed.hooks.systemui.SettingsLibUtilsProvider
 
 abstract class BatteryDrawable : Drawable() {
 
@@ -13,6 +16,7 @@ abstract class BatteryDrawable : Drawable() {
     protected var customBlendColor = false
     protected var customFillRainbow = false
     protected var customChargingIcon = false
+    protected var colorForLevels: IntArray = intArrayOf(20, Color.RED, 100, Color.WHITE)
 
     protected var chargingColor: Int = Color.TRANSPARENT
     protected var fastChargingColor: Int = Color.TRANSPARENT
@@ -57,11 +61,32 @@ abstract class BatteryDrawable : Drawable() {
     abstract fun setChargingEnabled(charging: Boolean, isFast: Boolean)
     abstract fun setPowerSavingEnabled(powerSaveEnabled: Boolean)
 
+    fun getColorAttrDefaultColor(attr: Int, context: Context): Int {
+        return getColorAttrDefaultColor(context, attr, 0)
+    }
+
+    fun getColorAttrDefaultColor(context: Context, attr: Int): Int {
+        return getColorAttrDefaultColor(context, attr, 0)
+    }
+
     fun getColorAttrDefaultColor(context: Context, attr: Int, defValue: Int): Int {
-        val obtainStyledAttributes: TypedArray = context.obtainStyledAttributes(intArrayOf(attr))
-        val color: Int = obtainStyledAttributes.getColor(0, defValue)
-        obtainStyledAttributes.recycle()
-        return color
+        return try {
+            SettingsLibUtilsProvider.getColorAttrDefaultColor(attr, context, defValue);
+        } catch (ignored: Throwable) {
+            val obtainStyledAttributes: TypedArray =
+                context.obtainStyledAttributes(intArrayOf(attr))
+            val color: Int = obtainStyledAttributes.getColor(0, defValue)
+            obtainStyledAttributes.recycle()
+            color
+        }
+    }
+
+    fun getResources(context: Context): Resources {
+        return try {
+            modRes ?: context.resources
+        } catch (ignored: Throwable) {
+            context.resources
+        }
     }
 
     companion object {
