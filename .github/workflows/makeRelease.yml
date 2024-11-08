@@ -1,0 +1,84 @@
+name: Make Release
+
+
+on:
+  push:
+    tags: '*'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    permissions:
+      contents: write
+
+    steps:
+      - name: Source Code Download
+        run: git clone --branch stable --single-branch --recurse-submodules https://github.com/DHD2280/Oxygen-Customizer.git .
+
+      - name: JDK 17 Setup
+        uses: actions/setup-java@v4.1.0
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Shell Scripts Permissions
+        run: chmod +x .github/*.sh
+
+      - name: Version Bump
+        run: .github/bumpVersion.sh ${{ github.run_id }}
+
+      - name: Gradlew Permissions
+        run: chmod +x gradlew
+
+      - name: Signature files preparation
+        run: |
+          if [ ! -z "${{ secrets.KEYSTORE }}" ]; then
+            echo storePassword='${{ secrets.KEYSTORE_PASSWORD }}' >> keystore.properties
+            echo keyAlias='${{ secrets.KEY_ALIAS }}' >> keystore.properties
+            echo keyPassword='${{ secrets.KEY_PASSWORD }}' >> keystore.properties
+            echo storeFile='${{ github.workspace }}/key.jks' >> keystore.properties
+            echo ${{ secrets.KEYSTORE }} | base64 --decode > ${{ github.workspace }}/key.jks
+          fi
+
+      - name: Gradle Build
+        run: ./gradlew assembleRelease
+
+      - name: Upload Xposed Artifact to Actions
+        uses: actions/upload-artifact@v4.3.1
+        with:
+          name: OxygenCustomizer
+          path: app/build/outputs/apk/release/*.apk
+
+      - name: Oxygen Customizer Binary Release
+        uses: ncipollo/release-action@v1.14.0
+        with:
+          tag: ${{ github.ref }}
+          name: ${{ github.ref_name }}
+          prerelease: false
+          draft: false
+          bodyFile: 'releaseNotes.md'
+          artifacts: 'app/build/outputs/apk/release/*.apk'
+
+      - name: Version Bump Commit
+        uses: github-actions-x/commit@v2.9
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          push-branch: 'stable'
+          commit-message: 'Version update: Release'
+          force-add: 'true'
+          files: app/build.gradle.kts StableChangelog.md latestStable.json
+          name: GitHub
+          email: OxygenCustomizer@dhd.it
+
+      - name: Telegram Channel Post
+        run: |
+          curl -X POST \
+            -H 'Content-Type: application/json' \
+            -d '{"chat_id": ${{ secrets.OC_CHANNEL }}, "text": "'"$(echo ${{ env.TMessage }})"'", "reply_markup": {"inline_keyboard": [[{"text":"Download", "url": "https://www.github.com/DHD2280/Oxygen-Customizer/releases/download/"${GITHUB_REF_NAME/v/}"/OxygenCustomizer.apk"}]]}' https://api.telegram.org/bot${{ secrets.TELEGRAM_TK }}/sendMessage
+
+      - name: Telegram Channel Post 2
+        run: |
+          curl -X POST \
+            -d '{"chat_id": ${{ secrets.OC_CHANNEL2 }}, "text": "'"$(echo ${{ env.TMessage }})"'", "reply_markup": {"inline_keyboard": [[{"text":"Download", "url": "https://www.github.com/DHD2280/Oxygen-Customizer/releases/download/"${GITHUB_REF_NAME/v/}"/OxygenCustomizer.apk"}]]}' https://api.telegram.org/bot${{ secrets.TELEGRAM_TK }}/sendMessage
