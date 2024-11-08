@@ -27,7 +27,7 @@ jobs:
         run: chmod +x .github/*.sh
 
       - name: Version Bump
-Fix         run: .github/bumpVersion.sh
+        run: .github/bumpVersion.sh
 
       - name: Gradlew Permissions
         run: chmod +x gradlew
@@ -76,9 +76,4 @@ Fix         run: .github/bumpVersion.sh
         run: |
           curl -X POST \
             -H 'Content-Type: application/json' \
-            -d '{"chat_id": ${{ secrets.OC_CHANNEL }}, "text": "'"$(echo ${{ env.TMessage }})"'", "reply_markup": {"inline_keyboard": [[{"text":"Download", "url": "https://www.github.com/DHD2280/OC/releases/download/"${GITHUB_REF_NAME/v/}"/OxygenCustomizer.apk"}]]}' https://api.telegram.org/bot${{ secrets.TELEGRAM_TK }}/sendMessage
-
-      - name: Telegram Channel Post 2
-        run: |
-          curl -X POST \
-            -d '{"chat_id": ${{ secrets.OC_CHANNEL2 }}, "text": "'"$(echo ${{ env.TMessage }})"'", "reply_markup": {"inline_keyboard": [[{"text":"Download", "url": "https://www.github.com/DHD2280/OC/releases/download/"${GITHUB_REF_NAME/v/}"/OxygenCustomizer.apk"}]]}' https://api.telegram.org/bot${{ secrets.TELEGRAM_TK }}/sendMessage
+            -d '{"chat_id": ${{ secrets.CHAT_ID }}, "text": "'"$(echo ${{ env.TMessage }})"'", "parse_mode": "Markdown", "reply_markup": {"inline_keyboard": [[{"text":"Download", "url": "https://www.github.com/DHD2280/OC/releases/download/"${{ github.ref }}"/OxygenCustomizer.apk"}]]}' https://api.telegram.org/bot${{ secrets.TELEGRAM_TK }}/sendMessage
